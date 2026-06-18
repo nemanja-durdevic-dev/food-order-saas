@@ -1,0 +1,113 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+import type { Location, MenuCategory, OrderMenuProps } from "./types";
+import { locationStorageKey, readStoredLocationId, writeStoredLocationId } from "./storage";
+
+function isLocationAvailable(location: Location): boolean {
+  return location.is_open !== false;
+}
+
+function getCategoriesForLocation(
+  categories: OrderMenuProps["categories"],
+  location: Location | undefined,
+) {
+  if (!location) {
+    return [];
+  }
+
+  return categories
+    .map((category) => ({
+      ...category,
+      menu_items: category.menu_items.filter((item) =>
+        item.availableLocationIds.includes(location.id),
+      ),
+    }))
+    .filter((category) => category.menu_items.length > 0);
+}
+
+export type LocationState = {
+  selectedLocation: Location | undefined;
+  selectedLocationId: string | null;
+  hasHydratedLocation: boolean;
+  selectedCategories: MenuCategory[];
+  selectLocation: (locationId: string) => void;
+};
+
+export function useLocation(locations: Location[], categories: MenuCategory[]): LocationState {
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [hasHydratedLocation, setHasHydratedLocation] = useState(false);
+
+  const selectedLocation = locations.find(
+    (location) => location.id === selectedLocationId && isLocationAvailable(location),
+  );
+
+  const selectedCategories = useMemo(
+    () => getCategoriesForLocation(categories, selectedLocation),
+    [categories, selectedLocation],
+  );
+
+  useEffect(() => {
+    const storedLocationId = readStoredLocationId();
+    const storedLocation = locations.find(
+      (location) => location.id === storedLocationId && isLocationAvailable(location),
+    );
+
+    if (storedLocation) {
+      const selectTimeoutId = window.setTimeout(() => {
+        setSelectedLocationId(storedLocation.id);
+        setHasHydratedLocation(true);
+      }, 0);
+
+      return () => {
+        window.clearTimeout(selectTimeoutId);
+      };
+    }
+
+    if (storedLocationId) {
+      try {
+        window.localStorage.removeItem(locationStorageKey);
+      } catch {
+        // Ignore storage failures so users can still choose a location.
+      }
+    }
+
+    const openTimeoutId = window.setTimeout(() => {
+      setHasHydratedLocation(true);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(openTimeoutId);
+    };
+  }, [locations]);
+
+  useEffect(() => {
+    if (!selectedLocation) {
+      return;
+    }
+
+    writeStoredLocationId(selectedLocation.id);
+  }, [selectedLocation]);
+
+  function selectLocation(locationId: string) {
+    const nextLocation = locations.find(
+      (location) => location.id === locationId && isLocationAvailable(location),
+    );
+
+    if (!nextLocation) {
+      return;
+    }
+
+    writeStoredLocationId(locationId);
+    setSelectedLocationId(locationId);
+  }
+
+  return {
+    selectedLocation,
+    selectedLocationId,
+    hasHydratedLocation,
+    selectedCategories,
+    selectLocation,
+  };
+}
