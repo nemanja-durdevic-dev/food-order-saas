@@ -61,6 +61,16 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const { data: location, error: locationError } = await supabaseAdmin
+      .from("locations")
+      .select("restaurant_id")
+      .eq("id", body.locationId)
+      .single();
+
+    if (locationError || !location) {
+      return NextResponse.json({ error: "Invalid location" }, { status: 400 });
+    }
+
     const { data: numberData, error: numberError } =
       await supabaseAdmin.rpc("increment_order_number");
 
@@ -73,6 +83,7 @@ export async function POST(request: NextRequest) {
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
       .insert({
+        restaurant_id: location.restaurant_id,
         user_id: user.id,
         location_id: body.locationId,
         status: "pending",
