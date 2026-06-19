@@ -42,17 +42,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/staff/orders", request.url));
   }
 
-  // Admin only on /admin routes
-  if (role === "admin") {
-    if (url.startsWith("/admin")) return supabaseResponse;
-    return NextResponse.redirect(new URL("/admin", request.url));
-  }
-
-  // Not staff/admin — protect staff/admin routes from unauthenticated access
+  // Not staff — protect staff routes from unauthenticated access.
+  // /admin handles owner authentication and membership checks on the page.
   if (url.startsWith("/staff") && url !== "/staff/login") {
-    return NextResponse.redirect(new URL("/staff/login", request.url));
-  }
-  if (url.startsWith("/admin")) {
     return NextResponse.redirect(new URL("/staff/login", request.url));
   }
 

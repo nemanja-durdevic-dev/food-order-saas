@@ -19,11 +19,23 @@ create table public.restaurants (
   logo_url text,
   cover_image_url text,
   brand_color text,
+  stripe_account_id text,
+  payments_enabled boolean not null default false,
   status text not null default 'active' check (status in ('active', 'inactive')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (slug),
   check (slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$')
+);
+
+create table public.restaurant_members (
+  id uuid primary key default gen_random_uuid(),
+  restaurant_id uuid not null references public.restaurants(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  role text not null default 'owner' check (role in ('owner')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (restaurant_id, user_id)
 );
 
 create table public.locations (
@@ -245,6 +257,7 @@ end;
 $$;
 
 create unique index locations_restaurant_name_idx on public.locations (restaurant_id, name);
+create index restaurant_members_user_id_idx on public.restaurant_members (user_id);
 create unique index categories_restaurant_name_idx on public.categories (restaurant_id, name);
 create unique index menu_items_restaurant_name_idx on public.menu_items (restaurant_id, name);
 create unique index menu_item_locations_item_location_idx on public.menu_item_locations (menu_item_id, location_id);
@@ -260,6 +273,7 @@ create index order_items_order_id_idx on public.order_items (order_id);
 create index reviews_restaurant_id_idx on public.reviews (restaurant_id);
 
 create trigger restaurants_set_updated_at before update on public.restaurants for each row execute function public.set_updated_at();
+create trigger restaurant_members_set_updated_at before update on public.restaurant_members for each row execute function public.set_updated_at();
 create trigger locations_set_updated_at before update on public.locations for each row execute function public.set_updated_at();
 create trigger categories_set_updated_at before update on public.categories for each row execute function public.set_updated_at();
 create trigger menu_items_set_updated_at before update on public.menu_items for each row execute function public.set_updated_at();
@@ -277,6 +291,7 @@ create trigger orders_set_updated_at before update on public.orders for each row
 create trigger reviews_set_updated_at before update on public.reviews for each row execute function public.set_updated_at();
 
 alter table public.restaurants enable row level security;
+alter table public.restaurant_members enable row level security;
 alter table public.locations enable row level security;
 alter table public.categories enable row level security;
 alter table public.menu_items enable row level security;
@@ -294,6 +309,7 @@ alter table public.order_items enable row level security;
 alter table public.reviews enable row level security;
 
 create policy "Active restaurants are publicly readable" on public.restaurants for select to anon, authenticated using (status = 'active');
+create policy "Restaurant members are readable by member" on public.restaurant_members for select to authenticated using ((select auth.uid()) = user_id);
 create policy "Locations are publicly readable" on public.locations for select to anon, authenticated using (true);
 create policy "Categories are publicly readable" on public.categories for select to anon, authenticated using (true);
 create policy "Available menu items are publicly readable" on public.menu_items for select to anon, authenticated using (is_available = true);
@@ -336,8 +352,9 @@ create policy "Reviews are insertable by owner" on public.reviews for insert to 
 create policy "Reviews are updatable by owner" on public.reviews for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "Reviews are deletable by owner" on public.reviews for delete to authenticated using ((select auth.uid()) = user_id);
 
-grant usage on schema public to anon, authenticated;
+grant usage on schema public to anon, authenticated, service_role;
 grant select on public.restaurants to anon, authenticated;
+grant select on public.restaurant_members to authenticated;
 grant select on public.locations to anon, authenticated;
 grant select on public.categories to anon, authenticated;
 grant select on public.menu_items to anon, authenticated;
@@ -355,3 +372,5 @@ grant select, insert, update, delete on public.orders to authenticated;
 grant select, insert, update, delete on public.order_items to authenticated;
 grant insert, update, delete on public.reviews to authenticated;
 grant usage on sequence public.order_number_seq to authenticated;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
