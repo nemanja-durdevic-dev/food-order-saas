@@ -28,6 +28,8 @@ type CheckoutBody = {
   subtotal: number;
 };
 
+const PLATFORM_FEE_AMOUNT = 200;
+
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("Authorization");
 
@@ -62,10 +64,36 @@ export async function POST(request: NextRequest) {
       .from("locations")
       .select("restaurant_id")
       .eq("id", body.locationId)
-      .single();
+      .maybeSingle();
 
-    if (locationError || !location) {
+    if (locationError) {
+      console.error("Checkout location lookup error:", locationError);
+
+      return NextResponse.json({ error: "Failed to read location" }, { status: 500 });
+    }
+
+    if (!location) {
       return NextResponse.json({ error: "Invalid location" }, { status: 400 });
+    }
+
+    const { data: restaurant, error: restaurantError } = await supabaseAdmin
+      .from("restaurants")
+      .select("stripe_account_id, payments_enabled")
+      .eq("id", location.restaurant_id)
+      .maybeSingle();
+
+    if (restaurantError) {
+      console.error("Checkout restaurant lookup error:", restaurantError);
+
+      return NextResponse.json({ error: "Failed to read restaurant" }, { status: 500 });
+    }
+
+    if (!restaurant) {
+      return NextResponse.json({ error: "Invalid restaurant" }, { status: 400 });
+    }
+
+    if (!restaurant.payments_enabled || !restaurant.stripe_account_id) {
+      return NextResponse.json({ error: "Stripe payments are not configured" }, { status: 400 });
     }
 
     const { data: numberData, error: numberError } =
@@ -136,6 +164,12 @@ export async function POST(request: NextRequest) {
         },
         quantity: item.quantity,
       })),
+      payment_intent_data: {
+        application_fee_amount: PLATFORM_FEE_AMOUNT,
+        transfer_data: {
+          destination: restaurant.stripe_account_id,
+        },
+      },
       success_url: `${origin}/order/${order.id}`,
       cancel_url: `${origin}/order`,
     });
