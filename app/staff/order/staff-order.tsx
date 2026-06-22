@@ -663,7 +663,7 @@ function ItemCard({
           </div>
         ) : (
           <button
-            className="flex h-7 items-center gap-1 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            className="flex h-7 items-center gap-1 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
             disabled={!item.is_available}
             onClick={onIncrement}
             type="button"

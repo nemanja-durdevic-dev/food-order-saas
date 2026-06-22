@@ -55,7 +55,7 @@ export function MenuCategoryList({
                   onClick={onOpenAllergens}
                   type="button"
                 >
-                  <span className="text-amber-300" aria-hidden="true">
+                  <span className="text-foreground" aria-hidden="true">
                     ⚠️
                   </span>
                   {t("item.allergens")}
@@ -103,7 +103,10 @@ export function MenuItemCard({
       className={`relative min-w-0 w-full rounded-xl border-0 bg-card/90 shadow-sm ${cartIndicatorClassName} ${item.is_available ? "" : "opacity-60 ring-1 ring-destructive/20"}`}
     >
       {hasSelectedAllergen ? (
-        <span className="absolute -right-1 -top-1.5 z-10 text-sm text-amber-300" aria-hidden="true">
+        <span
+          className="absolute -right-1 -top-1.5 z-10 text-sm text-foreground"
+          aria-hidden="true"
+        >
           ⚠️
         </span>
       ) : null}

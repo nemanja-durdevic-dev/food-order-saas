@@ -18,9 +18,9 @@ type OrderRow = {
 };
 
 const statusColors: Record<string, string> = {
-  pending: "text-amber-600 bg-amber-50 border-amber-200",
+  pending: "text-gray-600 bg-gray-50 border-gray-200",
   confirmed: "text-blue-600 bg-blue-50 border-blue-200",
-  preparing: "text-orange-600 bg-orange-50 border-orange-200",
+  preparing: "text-indigo-600 bg-indigo-50 border-indigo-200",
   ready_for_pickup: "text-green-600 bg-green-50 border-green-200",
   completed: "text-gray-500 bg-gray-50 border-gray-200",
   cancelled: "text-red-600 bg-red-50 border-red-200",

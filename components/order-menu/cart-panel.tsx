@@ -235,7 +235,7 @@ export function CartPanel({
                   aria-pressed={isSelected}
                   className={`rounded-md border p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     isSelected
-                      ? "border-foreground bg-muted/70 shadow-sm"
+                      ? "border-foreground bg-secondary shadow-sm"
                       : "border-border bg-white hover:border-foreground/40"
                   }`}
                   key={option.value}
@@ -323,7 +323,7 @@ export function CartPanel({
                                 />
                               </div>
                             ) : (
-                              <div className="grid size-12 shrink-0 place-items-center rounded-md bg-orange-200 px-1 text-center text-[7px] font-black uppercase leading-3 tracking-[0.08em] text-secondary-foreground/70">
+                              <div className="grid size-12 shrink-0 place-items-center rounded-md bg-secondary px-1 text-center text-[7px] font-black uppercase leading-3 tracking-[0.08em] text-secondary-foreground/70">
                                 Image
                               </div>
                             )}
@@ -397,7 +397,7 @@ export function CartPanel({
                 aria-label="Selected payment method: Vipps"
                 className={`flex h-16 w-full cursor-pointer items-center rounded-md border px-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                   paymentMethod === "vipps"
-                    ? "border-foreground bg-muted/70"
+                    ? "border-foreground bg-secondary"
                     : paymentError
                       ? "border-destructive bg-white"
                       : "border-border bg-white hover:border-foreground/40"
@@ -445,7 +445,7 @@ export function CartPanel({
                 aria-label="Payment method: Card"
                 className={`flex h-16 w-full cursor-pointer items-center gap-3 rounded-md border px-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                   paymentMethod === "card"
-                    ? "border-foreground bg-muted/70"
+                    ? "border-foreground bg-secondary"
                     : paymentError
                       ? "border-destructive bg-white"
                       : "border-border bg-white hover:border-foreground/40"

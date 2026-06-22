@@ -879,7 +879,7 @@ export function OrderMenu({
               quantity: cartQuantity,
               items: t(cartQuantity === 1 ? "common.item" : "common.items"),
             })}
-            className="h-14 w-full rounded-md bg-primary px-6 text-base font-semibold text-primary-foreground hover:bg-primary/90"
+            className="h-14 w-full rounded-md bg-primary px-6 text-base font-semibold text-primary-foreground hover:bg-primary-hover"
             onClick={openCart}
             type="button"
           >
@@ -1192,7 +1192,7 @@ function AllergenActivatedModal({
         <div>
           <div className="mx-auto flex size-16 items-center justify-center">
             <TriangleAlert
-              className="size-14 fill-yellow-400 text-black"
+              className="size-14 fill-secondary text-foreground"
               aria-hidden="true"
               strokeWidth={2.6}
             />

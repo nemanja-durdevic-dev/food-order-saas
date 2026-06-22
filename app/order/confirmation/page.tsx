@@ -39,7 +39,7 @@ export default async function OrderConfirmationPage() {
         </p>
         <div className="mt-8 flex flex-col gap-3">
           <Link
-            className="inline-flex h-12 w-full items-center justify-center rounded-md bg-primary px-6 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex h-12 w-full items-center justify-center rounded-md bg-primary px-6 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary-hover"
             href="/order"
           >
             {t.order.back_to_menu as string}

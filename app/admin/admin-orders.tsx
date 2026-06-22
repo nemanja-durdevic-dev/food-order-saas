@@ -31,7 +31,7 @@ const STATUS_BADGE: Record<string, string> = {
   pending: "bg-gray-100 text-gray-700",
   unpaid: "bg-gray-100 text-gray-700",
   confirmed: "bg-red-100 text-red-700",
-  preparing: "bg-amber-100 text-amber-700",
+  preparing: "bg-indigo-100 text-indigo-700",
   ready_for_pickup: "bg-green-100 text-green-700",
   completed: "bg-blue-100 text-blue-700",
   cancelled: "bg-gray-100 text-gray-500",

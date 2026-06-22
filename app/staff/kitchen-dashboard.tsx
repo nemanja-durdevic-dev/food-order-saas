@@ -69,7 +69,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const BORDER_COLOR: Record<string, string> = {
   confirmed: "border-l-red-500",
-  preparing: "border-l-amber-500",
+  preparing: "border-l-indigo-500",
   ready_for_pickup: "border-l-green-500",
 };
 
@@ -231,7 +231,7 @@ export default function KitchenDashboard({
         {scheduledOrders.length > 0 && (
           <button
             onClick={() => setShowScheduled(true)}
-            className="flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-200 transition-colors"
+            className="flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
             type="button"
           >
             <CalendarClock className="size-3.5" />
@@ -251,7 +251,7 @@ export default function KitchenDashboard({
             >
               <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-b border-border">
                 <div
-                  className={`size-2.5 rounded-full ${status === "confirmed" ? "bg-red-500" : status === "preparing" ? "bg-amber-500" : "bg-green-500"}`}
+                  className={`size-2.5 rounded-full ${status === "confirmed" ? "bg-red-500" : status === "preparing" ? "bg-indigo-500" : "bg-green-500"}`}
                 />
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                   {STATUS_LABEL[status]}
@@ -275,7 +275,7 @@ export default function KitchenDashboard({
                         <div className="flex items-center gap-2">
                           <span className="text-2xl font-black">{order.order_code}</span>
                           {order.order_timing === "preorder" && order.preorder_time && (
-                            <span className="shrink-0 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                            <span className="shrink-0 rounded-md bg-secondary px-2 py-0.5 text-xs font-semibold text-foreground">
                               {order.preorder_date && (
                                 <>
                                   {new Date(order.preorder_date).toLocaleDateString("nb-NO", {
@@ -370,7 +370,7 @@ export default function KitchenDashboard({
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xl font-black">{order.order_code}</span>
-                      <span className="shrink-0 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                      <span className="shrink-0 rounded-md bg-secondary px-2 py-0.5 text-xs font-semibold text-foreground">
                         {order.preorder_date && (
                           <>
                             {new Date(order.preorder_date).toLocaleDateString("nb-NO", {
@@ -387,7 +387,7 @@ export default function KitchenDashboard({
                         order.status === "confirmed"
                           ? "bg-red-100 text-red-800"
                           : order.status === "preparing"
-                            ? "bg-amber-100 text-amber-800"
+                            ? "bg-indigo-100 text-indigo-800"
                             : "bg-green-100 text-green-800"
                       }`}
                     >

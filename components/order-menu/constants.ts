@@ -17,12 +17,12 @@ export const localeToDateTimeFormat: Record<string, string> = {
 };
 
 export const accents = [
-  "bg-orange-200",
-  "bg-amber-200",
-  "bg-yellow-200",
-  "bg-red-200",
-  "bg-lime-200",
-  "bg-stone-300",
+  "bg-zinc-100",
+  "bg-neutral-100",
+  "bg-stone-100",
+  "bg-gray-100",
+  "bg-zinc-200",
+  "bg-neutral-200",
 ];
 
 export const menuItemMediaClass =

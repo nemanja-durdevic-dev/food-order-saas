@@ -251,7 +251,7 @@ function ItemImage({ item }: { item: MenuItem }) {
 
   if (!item.image_url) {
     return (
-      <div className="grid h-40 w-full place-items-center bg-orange-200 text-xs font-black uppercase tracking-[0.16em] text-secondary-foreground/70 sm:h-56">
+      <div className="grid h-40 w-full place-items-center bg-secondary text-xs font-black uppercase tracking-[0.16em] text-secondary-foreground/70 sm:h-56">
         {t("item.image_placeholder")}
       </div>
     );

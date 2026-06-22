@@ -14,10 +14,10 @@ export default async function Home() {
     .order("name", { ascending: true });
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_center,#fed7aa_0,#fff8ef_42%,#fff8ef_100%)] px-6 py-10 sm:py-16">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_center,#e5e7eb_0,#f7f7f8_42%,#f7f7f8_100%)] px-6 py-10 sm:py-16">
       <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-10">
         <Logo variant="hero" />
-        <section className="w-full rounded-[2rem] border border-orange-200/70 bg-white/80 p-5 shadow-2xl shadow-orange-950/10 backdrop-blur sm:p-8">
+        <section className="w-full rounded-[2rem] border border-border bg-white/80 p-5 shadow-2xl shadow-black/10 backdrop-blur sm:p-8">
           <div className="mb-6 text-center">
             <h1 className="text-3xl font-black tracking-[-0.04em] text-foreground sm:text-5xl">
               Choose a restaurant
@@ -37,12 +37,12 @@ export default async function Home() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {restaurants.map((restaurant) => (
                 <Link
-                  className="group flex min-h-44 flex-col justify-between rounded-3xl border border-border bg-card p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-orange-950/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
+                  className="group flex min-h-44 flex-col justify-between rounded-3xl border border-border bg-card p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
                   href={`/${restaurant.slug}/order`}
                   key={restaurant.id}
                 >
                   <div className="flex items-start gap-4">
-                    <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary text-2xl font-black text-primary-foreground shadow-lg shadow-orange-950/15">
+                    <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary text-2xl font-black text-primary-foreground shadow-lg shadow-black/10">
                       {restaurant.logo_url ? (
                         <Image
                           alt=""
@@ -73,7 +73,7 @@ export default async function Home() {
           ) : null}
 
           {!error && !restaurants?.length ? (
-            <p className="rounded-2xl bg-orange-50 p-6 text-center text-sm font-semibold text-muted-foreground">
+            <p className="rounded-2xl bg-muted p-6 text-center text-sm font-semibold text-muted-foreground">
               No restaurants are accepting orders yet.
             </p>
           ) : null}

@@ -12,7 +12,7 @@ export function Logo({ className, variant = "inline" }: LogoProps) {
   if (variant === "hero") {
     return (
       <div className={cn("flex flex-col items-center gap-4 text-center", className)}>
-        <div className="flex size-24 rotate-[-8deg] items-center justify-center rounded-[2rem] bg-foreground text-background shadow-xl shadow-orange-950/15">
+        <div className="flex size-24 rotate-[-8deg] items-center justify-center rounded-[2rem] bg-foreground text-background shadow-xl shadow-black/10">
           <Flame className="size-12 fill-current" aria-hidden="true" />
         </div>
         <div>

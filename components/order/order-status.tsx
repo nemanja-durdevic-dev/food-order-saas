@@ -312,7 +312,7 @@ function OrderStatusInner({
               <p className="pt-1 text-sm text-muted-foreground">{t("order.payment_failed_note")}</p>
             </div>
             <Link
-              className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-md bg-primary px-6 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-md bg-primary px-6 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               href="/order"
             >
               {t("order.back_to_menu")}
