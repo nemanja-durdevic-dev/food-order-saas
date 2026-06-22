@@ -19,7 +19,7 @@ type AllergenDialogProps = {
   onClose: () => void;
   onOpenAuth: () => void;
   onSave: (selectedIds: string[]) => void;
-  userPhone: string | null;
+  userEmail: string | null;
 };
 
 export function AllergenDialog({
@@ -30,7 +30,7 @@ export function AllergenDialog({
   onClose,
   onOpenAuth,
   onSave,
-  userPhone,
+  userEmail,
 }: AllergenDialogProps) {
   const t = useTranslations();
   const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
@@ -146,7 +146,7 @@ export function AllergenDialog({
         </div>
 
         <div className="space-y-3 bg-white p-5 pt-3 shadow-[0_-16px_30px_rgba(255,255,255,0.95)] sm:p-6 sm:pt-4">
-          {!userPhone ? (
+          {!userEmail ? (
             <div className="flex items-center justify-between gap-3 rounded-md bg-muted p-3">
               <p className="text-xs font-medium leading-5 text-foreground sm:text-sm">
                 {t("item.log_in_to_save_allergens")}

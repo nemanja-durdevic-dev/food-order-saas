@@ -6,6 +6,7 @@
     "update": "Uppdatera",
     "cancel": "Avbryt",
     "save": "Spara",
+    "edit": "Redigera",
     "close": "Stäng",
     "item": "vara",
     "items": "varor",
@@ -34,14 +35,13 @@
   },
   "auth": {
     "log_in": "Logga in",
-    "phone_number": "Telefonnummer",
-    "send_code": "Skicka kod",
-    "enter_code": "Ange kod",
-    "code": "Kod",
-    "did_not_receive": "Fick du inte koden?",
-    "send_again": "Skicka kod igen",
+    "email": "E-post",
+    "send_magic_link": "Skicka inloggningslänk",
+    "check_email": "Kontrollera din e-post",
+    "magic_link_description": "Ange din e-postadress så skickar vi en säker länk för att logga in.",
+    "magic_link_sent": "Vi skickade en inloggningslänk till {email}.",
     "login_button": "Logga in",
-    "invalid_phone": "Ange ett giltigt telefonnummer."
+    "invalid_email": "Ange en giltig e-postadress."
   },
   "cart": {
     "empty": "Varukorgen är tom",
@@ -125,6 +125,8 @@
     "name_placeholder": "Ditt namn",
     "email": "E-post",
     "email_placeholder": "epost@example.com",
+    "phone": "Telefonnummer",
+    "phone_placeholder": "+46 70 123 45 67",
     "save": "Spara",
     "log_out": "Logga ut",
     "my_orders": "Mina beställningar"

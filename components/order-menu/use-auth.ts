@@ -6,13 +6,13 @@ import { supabase } from "@/lib/supabase";
 
 export type AuthState = {
   userId: string | null;
-  userPhone: string | null;
+  userEmail: string | null;
   isAuthLoading: boolean;
 };
 
 export function useAuth(): AuthState {
   const [userId, setUserId] = useState<string | null>(null);
-  const [userPhone, setUserPhone] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
@@ -21,17 +21,17 @@ export function useAuth(): AuthState {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN") {
         setUserId(session?.user?.id ?? null);
-        setUserPhone(session?.user?.phone ?? null);
+        setUserEmail(session?.user?.email ?? null);
       } else if (event === "SIGNED_OUT") {
         setUserId(null);
-        setUserPhone(null);
+        setUserEmail(null);
       }
     });
 
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
         setUserId(data.user.id);
-        setUserPhone(data.user.phone ?? null);
+        setUserEmail(data.user.email ?? null);
       }
       setIsAuthLoading(false);
     });
@@ -41,5 +41,5 @@ export function useAuth(): AuthState {
     };
   }, []);
 
-  return { userId, userPhone, isAuthLoading };
+  return { userId, userEmail, isAuthLoading };
 }

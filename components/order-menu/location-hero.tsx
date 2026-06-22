@@ -32,7 +32,7 @@ type LocationHeroProps = {
   onOpenLanguage: () => void;
   selectedLocationImageUrl: string | null;
   selectedLocationName: string | null;
-  userPhone: string | null;
+  userEmail: string | null;
 };
 
 export function LocationHero({
@@ -46,7 +46,7 @@ export function LocationHero({
   onOpenLanguage,
   selectedLocationImageUrl,
   selectedLocationName,
-  userPhone,
+  userEmail,
 }: LocationHeroProps) {
   const locale = useLocale();
   const t = useTranslations();
@@ -136,16 +136,16 @@ export function LocationHero({
                         onClick={onOpenAuth}
                         type="button"
                       >
-                        {userPhone ? (
+                        {userEmail ? (
                           <User className="size-5 text-muted-foreground" aria-hidden="true" />
                         ) : (
                           <LogIn className="size-5 text-muted-foreground" aria-hidden="true" />
                         )}
-                        <span>{userPhone ? t("user.title") : t("auth.log_in")}</span>
+                        <span>{userEmail ? t("user.title") : t("auth.log_in")}</span>
                       </button>
                     </PopoverClose>
 
-                    {userPhone ? (
+                    {userEmail ? (
                       <>
                         <PopoverClose asChild>
                           <Link

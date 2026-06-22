@@ -57,7 +57,7 @@ type CartPanelProps = {
   onEditCartItem: (item: CartItem) => void;
   onOpenAuth: () => void;
   titleId?: string;
-  userPhone: string | null;
+  userEmail: string | null;
 };
 
 export function CartPanel({
@@ -72,7 +72,7 @@ export function CartPanel({
   onEditCartItem,
   onOpenAuth,
   titleId,
-  userPhone,
+  userEmail,
 }: CartPanelProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -207,7 +207,7 @@ export function CartPanel({
           </h2>
           <Button
             aria-label={t("common.close")}
-            className="size-10 rounded-full bg-white/85 shadow-lg backdrop-blur hover:bg-white"
+            className="size-10 rounded-full bg-white/85 backdrop-blur hover:bg-white"
             onClick={onClose}
             size="icon"
             type="button"
@@ -569,7 +569,7 @@ export function CartPanel({
           <p className="rounded-md bg-destructive/10 px-4 py-3 text-center text-sm font-semibold text-destructive">
             {t("location.closed")} — orders cannot be placed right now.
           </p>
-        ) : userPhone ? (
+        ) : userEmail ? (
           <Button
             className="h-14 w-full overflow-hidden rounded-md px-6 text-base font-semibold backdrop-blur-2xl"
             disabled={cartItems.length === 0 || isProcessingPayment}
@@ -613,7 +613,7 @@ export function CartPanel({
           <div className="relative flex max-h-[86dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-h-[90dvh] sm:max-w-md sm:rounded-3xl">
             <Button
               aria-label="Close preorder time selector"
-              className="absolute right-4 top-4 z-10 size-10 rounded-full bg-white/85 shadow-lg backdrop-blur hover:bg-white"
+              className="absolute right-4 top-4 z-10 size-10 rounded-full bg-white/85 backdrop-blur hover:bg-white"
               onClick={() => setIsPreorderOpen(false)}
               size="icon"
               type="button"

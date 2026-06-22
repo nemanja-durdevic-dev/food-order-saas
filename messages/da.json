@@ -6,6 +6,7 @@
     "update": "Opdater",
     "cancel": "Annuller",
     "save": "Gem",
+    "edit": "Rediger",
     "close": "Luk",
     "item": "vare",
     "items": "varer",
@@ -34,14 +35,13 @@
   },
   "auth": {
     "log_in": "Log ind",
-    "phone_number": "Telefonnummer",
-    "send_code": "Send kode",
-    "enter_code": "Indtast kode",
-    "code": "Kode",
-    "did_not_receive": "Fik du ikke koden?",
-    "send_again": "Send kode igen",
+    "email": "E-mail",
+    "send_magic_link": "Send loginlink",
+    "check_email": "Tjek din e-mail",
+    "magic_link_description": "Indtast din e-mail, så sender vi dig et sikkert link til at logge ind.",
+    "magic_link_sent": "Vi sendte et loginlink til {email}.",
     "login_button": "Log ind",
-    "invalid_phone": "Indtast et gyldigt telefonnummer."
+    "invalid_email": "Indtast en gyldig e-mailadresse."
   },
   "cart": {
     "empty": "Din kurv er tom",
@@ -125,6 +125,8 @@
     "name_placeholder": "Dit navn",
     "email": "E-mail",
     "email_placeholder": "email@example.com",
+    "phone": "Telefonnummer",
+    "phone_placeholder": "+45 12 34 56 78",
     "save": "Gem",
     "log_out": "Log ud",
     "my_orders": "Mine bestillinger"

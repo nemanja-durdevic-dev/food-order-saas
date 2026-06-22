@@ -37,7 +37,7 @@ export function Modal({
       >
         <Button
           aria-label={closeLabel}
-          className="absolute right-4 top-4 z-10 size-10 rounded-full bg-white/85 shadow-lg backdrop-blur hover:bg-white"
+          className="absolute right-4 top-4 z-10 size-10 rounded-full bg-white/85 backdrop-blur hover:bg-white"
           onClick={onClose}
           size="icon"
           type="button"

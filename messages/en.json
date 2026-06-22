@@ -6,6 +6,7 @@
     "update": "Update",
     "cancel": "Cancel",
     "save": "Save",
+    "edit": "Edit",
     "close": "Close",
     "item": "item",
     "items": "items",
@@ -34,14 +35,13 @@
   },
   "auth": {
     "log_in": "Log in",
-    "phone_number": "Phone number",
-    "send_code": "Send code",
-    "enter_code": "Enter code",
-    "code": "Code",
-    "did_not_receive": "Did you not receive code?",
-    "send_again": "Send code again",
+    "email": "Email",
+    "send_magic_link": "Send magic link",
+    "check_email": "Check your email",
+    "magic_link_description": "Enter your email and we will send you a secure link to log in.",
+    "magic_link_sent": "We sent a login link to {email}.",
     "login_button": "Log in",
-    "invalid_phone": "Please enter a valid phone number."
+    "invalid_email": "Please enter a valid email address."
   },
   "cart": {
     "empty": "Your cart is empty",
@@ -125,6 +125,8 @@
     "name_placeholder": "Your name",
     "email": "Email",
     "email_placeholder": "email@example.com",
+    "phone": "Phone number",
+    "phone_placeholder": "+47 123 45 678",
     "save": "Save",
     "log_out": "Log out",
     "my_orders": "My Orders"

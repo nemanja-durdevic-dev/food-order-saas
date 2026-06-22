@@ -86,7 +86,7 @@ export function OrderMenu({
   const [isCartAllergenWarningOpen, setIsCartAllergenWarningOpen] = useState(false);
   const [isCartAllergenWarningClosing, setIsCartAllergenWarningClosing] = useState(false);
 
-  const { userId, userPhone, isAuthLoading } = useAuth();
+  const { userId, userEmail, isAuthLoading } = useAuth();
   const {
     selectedLocation,
     selectedLocationId,
@@ -440,7 +440,7 @@ export function OrderMenu({
       authCloseTimeoutRef.current = null;
     }
 
-    if (userPhone) {
+    if (userEmail) {
       setIsUserClosing(false);
       setIsUserOpen(true);
     } else {
@@ -640,7 +640,7 @@ export function OrderMenu({
         onOpenLanguage={openLanguage}
         selectedLocationImageUrl={selectedLocation?.image_url ?? null}
         selectedLocationName={selectedLocation?.name ?? null}
-        userPhone={userPhone}
+        userEmail={userEmail}
       />
       <section className="relative bg-white">
         <div className="mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
@@ -669,9 +669,7 @@ export function OrderMenu({
             />
           ) : null}
 
-          {isUserOpen ? (
-            <UserDialog isClosing={isUserClosing} onClose={closeUser} phone={userPhone ?? ""} />
-          ) : null}
+          {isUserOpen ? <UserDialog isClosing={isUserClosing} onClose={closeUser} /> : null}
 
           {isCartOpen && shouldShowOrderContent ? (
             <div
@@ -704,7 +702,7 @@ export function OrderMenu({
                   onEditCartItem={openCartItemDetails}
                   onOpenAuth={openAuth}
                   titleId="cart-title"
-                  userPhone={userPhone}
+                  userEmail={userEmail}
                 />
               </div>
             </div>
@@ -757,7 +755,7 @@ export function OrderMenu({
               onClose={closeAllergens}
               onOpenAuth={openAuthFromAllergens}
               onSave={handleSaveAllergens}
-              userPhone={userPhone}
+              userEmail={userEmail}
             />
           ) : null}
 
@@ -1258,7 +1256,7 @@ function RestaurantInfoDialog({
       >
         <Button
           aria-label={t("common.close")}
-          className="absolute right-4 top-4 z-10 size-10 rounded-full bg-[#f7f7f8]/85 shadow-lg backdrop-blur hover:bg-[#f7f7f8]"
+          className="absolute right-4 top-4 z-10 size-10 rounded-full bg-[#f7f7f8]/85 backdrop-blur hover:bg-[#f7f7f8]"
           onClick={onClose}
           size="icon"
           type="button"

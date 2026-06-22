@@ -6,6 +6,7 @@
     "update": "Oppdater",
     "cancel": "Avbryt",
     "save": "Lagre",
+    "edit": "Rediger",
     "close": "Lukk",
     "item": "vare",
     "items": "varer",
@@ -34,14 +35,13 @@
   },
   "auth": {
     "log_in": "Logg inn",
-    "phone_number": "Telefonnummer",
-    "send_code": "Send kode",
-    "enter_code": "Skriv inn kode",
-    "code": "Kode",
-    "did_not_receive": "Fikk du ikke kode?",
-    "send_again": "Send kode på nytt",
+    "email": "E-post",
+    "send_magic_link": "Send innloggingslenke",
+    "check_email": "Sjekk e-posten din",
+    "magic_link_description": "Skriv inn e-posten din, så sender vi deg en sikker lenke for å logge inn.",
+    "magic_link_sent": "Vi sendte en innloggingslenke til {email}.",
     "login_button": "Logg inn",
-    "invalid_phone": "Vennligst skriv inn et gyldig telefonnummer."
+    "invalid_email": "Vennligst skriv inn en gyldig e-postadresse."
   },
   "cart": {
     "empty": "Handlekurven er tom",
@@ -125,6 +125,8 @@
     "name_placeholder": "Ditt navn",
     "email": "E-post",
     "email_placeholder": "epost@example.com",
+    "phone": "Telefonnummer",
+    "phone_placeholder": "+47 123 45 678",
     "save": "Lagre",
     "log_out": "Logg ut",
     "my_orders": "Mine bestillinger"
