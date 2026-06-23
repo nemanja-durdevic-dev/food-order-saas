@@ -1027,7 +1027,7 @@ function LocationThumbnail({
   if (location.image_url) {
     return (
       <span
-        className={`relative size-14 shrink-0 overflow-hidden rounded-xl bg-secondary ${
+        className={`relative size-14 shrink-0 overflow-hidden rounded bg-secondary ${
           variant === "closed" ? "grayscale" : ""
         }`}
       >
