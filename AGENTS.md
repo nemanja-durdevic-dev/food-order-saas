@@ -142,7 +142,6 @@ Break down the 1429-line `order-menu.tsx` component into manageable pieces — e
 - Cart panel: no default payment method; error scroll + red border; 15s fetch timeout.
 - Checkout route uses `increment_order_number()` RPC for `Z-{n}` codes.
 - Unpaid order timeout: 30s → verify with Stripe/Vipps → confirm or delete.
-- Twilio SMS: `lib/twilio.ts`, `POST /api/orders/[id]/notify` — brand name, order code, status link.
 - Brand config: `lib/brand.ts` exports `BRAND_NAME` from `NEXT_PUBLIC_BRAND_NAME` (default "FireBite").
 - **Vipps direct payment**: `lib/vipps.ts` (ePayment API + `getPaymentStatus` + `forceApprovePayment` for testing), `POST /api/checkout-vipps`, `POST /api/webhook/vipps`.
 - **Vipps fixes**: base URL `https://apitest.vipps.no` (was `test.api.vipps.no`), token path `/accessToken/get` (camelCase), auth via headers (not Basic auth), `paymentMethod.type: "WALLET"` (not `"Vipps"`), added `userFlow`, `paymentDescription`, `customer.phoneNumber`, system headers.
@@ -167,7 +166,7 @@ Break down the 1429-line `order-menu.tsx` component into manageable pieces — e
 ### Relevant Files
 
 - `proxy.ts`, `lib/supabase-server.ts`, `lib/supabase-browser.ts`, `lib/supabase.ts`
-- `lib/stripe.ts`, `lib/twilio.ts`, `lib/vipps.ts`, `lib/brand.ts`
+- `lib/stripe.ts`, `lib/vipps.ts`, `lib/brand.ts`
 - `app/api/checkout/route.ts`, `app/api/checkout-vipps/route.ts`
 - `app/api/webhook/stripe/route.ts`, `app/api/webhook/vipps/route.ts`
 - `app/api/orders/[id]/verify-payment/route.ts`, `app/api/orders/[id]/notify/route.ts`

@@ -177,18 +177,6 @@ export default function KitchenDashboard({
         .from("orders")
         .update({ status: next, updated_at: new Date().toISOString() })
         .eq("id", orderId);
-
-      if (next === "ready_for_pickup") {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-        if (token) {
-          fetch(`/api/orders/${orderId}/notify`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ origin: window.location.origin }),
-          }).catch(() => {});
-        }
-      }
     } finally {
       setLoadingOrders((prev) => {
         const nextSet = new Set(prev);
