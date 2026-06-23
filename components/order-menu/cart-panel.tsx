@@ -198,7 +198,7 @@ export function CartPanel({
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15_000);
 
-      const endpoint = paymentMethod === "vipps" ? "/api/checkout-vipps" : "/api/checkout";
+      const endpoint = paymentMethod === "vipps" ? "/api/checkout-vipps" : "/api/checkout-nets";
 
       const response = await fetch(endpoint, {
         method: "POST",

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
+import { getPayment } from "@/lib/nets";
 import { getPaymentStatus } from "@/lib/vipps";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
@@ -8,7 +9,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   const { data: order, error: orderError } = await supabaseAdmin
     .from("orders")
-    .select("payment_status, restaurant_id, stripe_session_id, vipps_payment_reference")
+    .select(
+      "payment_status, restaurant_id, stripe_session_id, vipps_payment_reference, nets_payment_id",
+    )
     .eq("id", id)
     .single();
 
@@ -51,6 +54,28 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ paid: false });
     } catch {
       return NextResponse.json({ error: "Failed to verify payment" }, { status: 500 });
+    }
+  }
+
+  // NETS payment verification
+  if (order.nets_payment_id) {
+    try {
+      const payment = await getPayment(order.nets_payment_id);
+
+      const isPaid = payment.state === "Reserved" || payment.state === "Charged";
+
+      if (isPaid) {
+        await supabaseAdmin
+          .from("orders")
+          .update({ payment_status: "paid", status: "confirmed" })
+          .eq("id", id);
+
+        return NextResponse.json({ paid: true });
+      }
+
+      return NextResponse.json({ paid: false });
+    } catch {
+      return NextResponse.json({ error: "Failed to verify NETS payment" }, { status: 500 });
     }
   }
 
