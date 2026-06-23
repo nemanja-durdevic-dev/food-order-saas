@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { assertLocationOpen } from "@/lib/location-check";
 import { createPayment, isVippsConfigured } from "@/lib/vipps";
 import { supabase } from "@/lib/supabase";
 import { supabaseAdmin } from "@/lib/supabase-admin";
@@ -61,15 +62,19 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { data: location, error: locationError } = await supabaseAdmin
-      .from("locations")
-      .select("restaurant_id")
-      .eq("id", body.locationId)
-      .single();
+    const locationCheck = await assertLocationOpen({
+      locationId: body.locationId,
+      orderTiming: body.orderTiming,
+      preorderDate: body.preorderDate,
+      preorderTime: body.preorderTime,
+      supabaseAdmin,
+    });
 
-    if (locationError || !location) {
-      return NextResponse.json({ error: "Invalid location" }, { status: 400 });
+    if (!locationCheck.allowed) {
+      return NextResponse.json({ error: locationCheck.error }, { status: 400 });
     }
+
+    const restaurantId = locationCheck.restaurantId;
 
     const { data: numberData, error: numberError } =
       await supabaseAdmin.rpc("increment_order_number");
@@ -83,7 +88,7 @@ export async function POST(request: NextRequest) {
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
       .insert({
-        restaurant_id: location.restaurant_id,
+        restaurant_id: restaurantId,
         user_id: user.id,
         location_id: body.locationId,
         status: "pending",

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { assertLocationOpen } from "@/lib/location-check";
 import { stripe } from "@/lib/stripe";
 import type Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
@@ -58,26 +59,24 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { data: location, error: locationError } = await supabaseAdmin
-      .from("locations")
-      .select("restaurant_id")
-      .eq("id", body.locationId)
-      .maybeSingle();
+    const locationCheck = await assertLocationOpen({
+      locationId: body.locationId,
+      orderTiming: body.orderTiming,
+      preorderDate: body.preorderDate,
+      preorderTime: body.preorderTime,
+      supabaseAdmin,
+    });
 
-    if (locationError) {
-      console.error("Checkout location lookup error:", locationError);
-
-      return NextResponse.json({ error: "Failed to read location" }, { status: 500 });
+    if (!locationCheck.allowed) {
+      return NextResponse.json({ error: locationCheck.error }, { status: 400 });
     }
 
-    if (!location) {
-      return NextResponse.json({ error: "Invalid location" }, { status: 400 });
-    }
+    const restaurantId = locationCheck.restaurantId;
 
     const { data: restaurant, error: restaurantError } = await supabaseAdmin
       .from("restaurants")
       .select("stripe_account_id, payments_enabled")
-      .eq("id", location.restaurant_id)
+      .eq("id", restaurantId)
       .maybeSingle();
 
     if (restaurantError) {
@@ -106,7 +105,7 @@ export async function POST(request: NextRequest) {
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
       .insert({
-        restaurant_id: location.restaurant_id,
+        restaurant_id: restaurantId,
         user_id: user.id,
         location_id: body.locationId,
         status: "pending",
