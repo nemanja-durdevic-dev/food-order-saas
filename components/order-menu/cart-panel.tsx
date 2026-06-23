@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import {
   BadgePercent,
   ChevronDown,
@@ -18,17 +18,16 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { supabase } from "@/lib/supabase";
 import { useLocale, useTranslations } from "./locale-context";
 import { localeToDateTimeFormat } from "./constants";
 
-import type { CartItem } from "./types";
+import type { CartItem, OpeningHour } from "./types";
 import { formatPrice, getCartCustomizationLabels, getPriceValue } from "./utils";
 
 type OrderTiming = "asap" | "preorder";
 type PaymentMethod = "vipps" | "card" | null;
-
-const todayDateValue = new Date().toISOString().slice(0, 10);
 
 function getOrderTimingOptions(t: ReturnType<typeof useTranslations>) {
   return [
@@ -56,6 +55,7 @@ type CartPanelProps = {
   onClose?: () => void;
   onEditCartItem: (item: CartItem) => void;
   onOpenAuth: () => void;
+  openingHours: OpeningHour[] | null;
   titleId?: string;
   userEmail: string | null;
 };
@@ -71,6 +71,7 @@ export function CartPanel({
   onClose,
   onEditCartItem,
   onOpenAuth,
+  openingHours,
   titleId,
   userEmail,
 }: CartPanelProps) {
@@ -78,13 +79,13 @@ export function CartPanel({
   const locale = useLocale();
   const orderTimingTitleId = useId();
   const preorderDialogTitleId = useId();
-  const preorderDateId = useId();
   const preorderTimeId = useId();
   const cartItemsSectionId = useId();
   const orderCommentId = useId();
   const promoCodeId = useId();
   const [orderTiming, setOrderTiming] = useState<OrderTiming>("asap");
   const [isPreorderOpen, setIsPreorderOpen] = useState(false);
+  const [isPreorderClosing, setIsPreorderClosing] = useState(false);
   const [areCartItemsOpen, setAreCartItemsOpen] = useState(true);
   const [isCommentOpen, setIsCommentOpen] = useState(false);
   const [isPromoCodeOpen, setIsPromoCodeOpen] = useState(false);
@@ -97,6 +98,33 @@ export function CartPanel({
   const [preorderDate, setPreorderDate] = useState("");
   const [preorderTime, setPreorderTime] = useState("");
 
+  const availableDays = useMemo(() => {
+    const today = new Date(new Date().toDateString());
+    const days: { dateValue: string; dayName: string; dayNumber: number }[] = [];
+    for (let i = 0; i < 10; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      const jsDay = date.getDay();
+      const ourDay = jsDay === 0 ? 6 : jsDay - 1;
+      const hours = openingHours?.find((h) => h.day === ourDay);
+      if (hours && hours.closed) continue;
+      days.push({
+        dateValue: date.toISOString().slice(0, 10),
+        dayName: new Intl.DateTimeFormat("en", { weekday: "short" }).format(date),
+        dayNumber: date.getDate(),
+      });
+    }
+    return days;
+  }, [openingHours]);
+
+  const selectedDayHours = useMemo(() => {
+    if (!preorderDate || !openingHours) return null;
+    const date = new Date(`${preorderDate}T00:00:00`);
+    const jsDay = date.getDay();
+    const ourDay = jsDay === 0 ? 6 : jsDay - 1;
+    return openingHours.find((h) => h.day === ourDay) ?? null;
+  }, [preorderDate, openingHours]);
+
   const preorderDescription =
     preorderDate && preorderTime
       ? `${formatDateLabel(preorderDate, locale)} ${preorderTime}`
@@ -104,11 +132,30 @@ export function CartPanel({
   const trimmedOrderComment = orderComment.trim();
   const trimmedPromoCode = promoCode.trim();
 
+  function openPreorderDialog() {
+    setIsPreorderOpen(true);
+    setIsPreorderClosing(false);
+    if (
+      availableDays.length > 0 &&
+      (!preorderDate || !availableDays.some((d) => d.dateValue === preorderDate))
+    ) {
+      setPreorderDate(availableDays[0].dateValue);
+    }
+  }
+
+  function closePreorderDialog() {
+    setIsPreorderClosing(true);
+    setTimeout(() => {
+      setIsPreorderOpen(false);
+      setIsPreorderClosing(false);
+    }, 300);
+  }
+
   function selectOrderTiming(value: OrderTiming) {
     setOrderTiming(value);
 
     if (value === "preorder") {
-      setIsPreorderOpen(true);
+      openPreorderDialog();
     }
   }
 
@@ -604,46 +651,36 @@ export function CartPanel({
         )}
       </div>
       {isPreorderOpen ? (
-        <div
-          aria-labelledby={preorderDialogTitleId}
-          aria-modal="true"
-          className="fixed inset-0 z-[60] flex items-end bg-foreground/40 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6"
-          role="dialog"
-        >
-          <div className="relative flex max-h-[86dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-h-[90dvh] sm:max-w-md sm:rounded-3xl">
-            <Button
-              aria-label="Close preorder time selector"
-              className="absolute right-4 top-4 z-10 size-10 rounded-full bg-white/85 backdrop-blur hover:bg-white"
-              onClick={() => setIsPreorderOpen(false)}
-              size="icon"
-              type="button"
-              variant="ghost"
+        <Modal isClosing={isPreorderClosing} onClose={closePreorderDialog}>
+          <div className="flex flex-1 flex-col px-5 pb-8 pt-14">
+            <h3
+              className="pr-12 text-2xl font-black tracking-[-0.04em] text-foreground"
+              id={preorderDialogTitleId}
             >
-              <X className="size-5" aria-hidden="true" />
-            </Button>
-            <div className="border-b border-border px-5 pb-4 pt-6">
-              <h3
-                className="pr-12 text-2xl font-black tracking-[-0.04em] text-foreground"
-                id={preorderDialogTitleId}
-              >
-                {t("cart.choose_datetime")}
-              </h3>
-            </div>
-            <div className="no-scrollbar flex-1 space-y-4 overflow-y-auto p-5">
-              <label
-                className="block text-sm font-semibold tracking-tight"
-                htmlFor={preorderDateId}
-              >
-                {t("cart.date")}
-              </label>
-              <input
-                className="h-12 w-full rounded-md border border-border bg-white px-3 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                id={preorderDateId}
-                min={todayDateValue}
-                onChange={(event) => setPreorderDate(event.target.value)}
-                type="date"
-                value={preorderDate}
-              />
+              {t("cart.choose_datetime")}
+            </h3>
+            <div className="mt-6 min-w-0 space-y-4">
+              <label className="block text-sm font-semibold tracking-tight">{t("cart.date")}</label>
+              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+                {availableDays.map(({ dateValue, dayName, dayNumber }) => {
+                  const isSelected = preorderDate === dateValue;
+                  return (
+                    <button
+                      key={dateValue}
+                      className={`flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${
+                        isSelected
+                          ? "bg-foreground text-background"
+                          : "bg-secondary text-foreground hover:bg-secondary/80"
+                      }`}
+                      onClick={() => setPreorderDate(dateValue)}
+                      type="button"
+                    >
+                      <span className="text-xs uppercase tracking-tight">{dayName}</span>
+                      <span className="text-base">{dayNumber}</span>
+                    </button>
+                  );
+                })}
+              </div>
               <label
                 className="block text-sm font-semibold tracking-tight"
                 htmlFor={preorderTimeId}
@@ -651,17 +688,19 @@ export function CartPanel({
                 {t("cart.time")}
               </label>
               <input
-                className="h-12 w-full rounded-md border border-border bg-white px-3 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="h-12 w-full min-w-0 rounded-md border border-border bg-white px-3 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 id={preorderTimeId}
+                max={selectedDayHours?.close ?? ""}
+                min={selectedDayHours?.open ?? ""}
                 onChange={(event) => setPreorderTime(event.target.value)}
                 type="time"
                 value={preorderTime}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3 border-t border-border bg-white p-5">
+            <div className="mt-auto grid grid-cols-2 gap-3 pt-6">
               <Button
                 className="h-12 rounded-md"
-                onClick={() => setIsPreorderOpen(false)}
+                onClick={closePreorderDialog}
                 type="button"
                 variant="outline"
               >
@@ -670,14 +709,14 @@ export function CartPanel({
               <Button
                 className="h-12 rounded-md"
                 disabled={!preorderDate || !preorderTime}
-                onClick={() => setIsPreorderOpen(false)}
+                onClick={closePreorderDialog}
                 type="button"
               >
                 {t("common.save")}
               </Button>
             </div>
           </div>
-        </div>
+        </Modal>
       ) : null}
     </div>
   );

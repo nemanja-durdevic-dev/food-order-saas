@@ -701,6 +701,7 @@ export function OrderMenu({
                   onClose={closeCart}
                   onEditCartItem={openCartItemDetails}
                   onOpenAuth={openAuth}
+                  openingHours={selectedLocation.opening_hours}
                   titleId="cart-title"
                   userEmail={userEmail}
                 />
