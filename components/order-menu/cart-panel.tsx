@@ -22,8 +22,9 @@ import { Modal } from "@/components/ui/modal";
 import { supabase } from "@/lib/supabase";
 import { useLocale, useTranslations } from "./locale-context";
 import { localeToDateTimeFormat } from "./constants";
+import { getMergedHoursForDate } from "./opening-hours";
 
-import type { CartItem, OpeningHour } from "./types";
+import type { CartItem, HoursOverride, OpeningHour } from "./types";
 import { formatPrice, getCartCustomizationLabels, getPriceValue } from "./utils";
 
 type OrderTiming = "asap" | "preorder";
@@ -56,6 +57,7 @@ type CartPanelProps = {
   onEditCartItem: (item: CartItem) => void;
   onOpenAuth: () => void;
   openingHours: OpeningHour[] | null;
+  overrides: HoursOverride[] | null;
   titleId?: string;
   userEmail: string | null;
 };
@@ -72,6 +74,7 @@ export function CartPanel({
   onEditCartItem,
   onOpenAuth,
   openingHours,
+  overrides,
   titleId,
   userEmail,
 }: CartPanelProps) {
@@ -104,26 +107,25 @@ export function CartPanel({
     for (let i = 0; i < 10; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      const jsDay = date.getDay();
-      const ourDay = jsDay === 0 ? 6 : jsDay - 1;
-      const hours = openingHours?.find((h) => h.day === ourDay);
-      if (hours && hours.closed) continue;
+      const dateValue = date.toISOString().slice(0, 10);
+      const { closed } = getMergedHoursForDate(dateValue, openingHours, overrides);
+      if (closed) continue;
       days.push({
-        dateValue: date.toISOString().slice(0, 10),
+        dateValue,
         dayName: new Intl.DateTimeFormat("en", { weekday: "short" }).format(date),
         dayNumber: date.getDate(),
       });
     }
     return days;
-  }, [openingHours]);
+  }, [openingHours, overrides]);
 
   const selectedDayHours = useMemo(() => {
-    if (!preorderDate || !openingHours) return null;
-    const date = new Date(`${preorderDate}T00:00:00`);
-    const jsDay = date.getDay();
-    const ourDay = jsDay === 0 ? 6 : jsDay - 1;
-    return openingHours.find((h) => h.day === ourDay) ?? null;
-  }, [preorderDate, openingHours]);
+    if (!preorderDate) return null;
+    const { closed, open, close } = getMergedHoursForDate(preorderDate, openingHours, overrides);
+    if (closed) return null;
+    if (!open || !close) return null;
+    return { open, close };
+  }, [preorderDate, openingHours, overrides]);
 
   const preorderDescription =
     preorderDate && preorderTime

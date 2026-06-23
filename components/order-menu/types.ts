@@ -59,9 +59,17 @@ export type OpeningHour = {
   close?: string;
 };
 
+export type HoursOverride = {
+  date: string;
+  is_closed: boolean;
+  open_time: string | null;
+  close_time: string | null;
+};
+
 export type OrderMenuProps = {
   allAllergens: ItemAllergen[];
   categories: MenuCategory[];
   error?: string;
   locations: Location[];
+  overridesByLocationId?: Map<string, HoursOverride[]>;
 };

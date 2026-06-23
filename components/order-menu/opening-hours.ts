@@ -1,4 +1,4 @@
-import type { OpeningHour } from "./types";
+import type { HoursOverride, OpeningHour } from "./types";
 
 const dayNames = [
   "Monday",
@@ -50,6 +50,37 @@ export function isCurrentlyOpen(openingHours: OpeningHour[] | null | undefined):
   const closeMinutes = closeHour * 60 + closeMin;
 
   return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+}
+
+export function getMergedHoursForDate(
+  dateStr: string,
+  weeklyHours: OpeningHour[] | null | undefined,
+  overrides: HoursOverride[] | null | undefined,
+): { closed: boolean; open?: string; close?: string } {
+  const override = overrides?.find((o) => o.date === dateStr);
+
+  if (override) {
+    if (override.is_closed) return { closed: true };
+    if (override.open_time && override.close_time) {
+      return {
+        closed: false,
+        open: override.open_time.slice(0, 5),
+        close: override.close_time.slice(0, 5),
+      };
+    }
+  }
+
+  if (!weeklyHours) return { closed: true };
+
+  const date = new Date(`${dateStr}T00:00:00`);
+  const jsDay = date.getDay();
+  const ourDay = jsDay === 0 ? 6 : jsDay - 1;
+  const hours = weeklyHours.find((h) => h.day === ourDay);
+
+  if (!hours || hours.closed) return { closed: true };
+  if (!hours.open || !hours.close) return { closed: true };
+
+  return { closed: false, open: hours.open, close: hours.close };
 }
 
 export function getScheduleForDisplay(

@@ -43,6 +43,7 @@ export function OrderMenu({
   categories,
   error,
   locations,
+  overridesByLocationId,
 }: OrderMenuProps) {
   const categoryRefs = useRef<Record<string, HTMLElement | null>>({});
   const categoryButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -702,6 +703,7 @@ export function OrderMenu({
                   onEditCartItem={openCartItemDetails}
                   onOpenAuth={openAuth}
                   openingHours={selectedLocation.opening_hours}
+                  overrides={overridesByLocationId?.get(selectedLocation.id) ?? null}
                   titleId="cart-title"
                   userEmail={userEmail}
                 />

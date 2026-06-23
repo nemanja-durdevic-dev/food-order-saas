@@ -110,8 +110,18 @@ export default async function RestaurantOrderPage({ params }: Props) {
   }
 
   const restaurantId = restaurant.id;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const endStr = new Date(new Date().getTime() + 10 * 86400000).toISOString().slice(0, 10);
+
+  const locationsResult = await supabase
+    .from("locations")
+    .select("id, name, address, phone, image_url, is_open, opening_hours")
+    .eq("restaurant_id", restaurantId)
+    .order("name", { ascending: true });
+
+  const locationIds = (locationsResult.data ?? []).map((l) => l.id);
+
   const [
-    locationsResult,
     categoriesResult,
     availabilityResult,
     menuItemsResult,
@@ -119,12 +129,8 @@ export default async function RestaurantOrderPage({ params }: Props) {
     allergensResult,
     addOnsResult,
     allAllergensResult,
+    overridesResult,
   ] = await Promise.all([
-    supabase
-      .from("locations")
-      .select("id, name, address, phone, image_url, is_open, opening_hours")
-      .eq("restaurant_id", restaurantId)
-      .order("name", { ascending: true }),
     supabase
       .from("categories")
       .select("id, name, name_no, name_sv, name_da, sort_order")
@@ -166,6 +172,12 @@ export default async function RestaurantOrderPage({ params }: Props) {
       .from("allergens")
       .select("id, name, name_no, name_sv, name_da")
       .order("name", { ascending: true }),
+    supabase
+      .from("location_hours_overrides")
+      .select("location_id, date, is_closed, open_time, close_time")
+      .in("location_id", locationIds.length > 0 ? locationIds : [""])
+      .gte("date", todayStr)
+      .lte("date", endStr),
   ]);
 
   const availableLocationIdsByItemId = (availabilityResult.data ?? []).reduce(
@@ -265,6 +277,18 @@ export default async function RestaurantOrderPage({ params }: Props) {
     id: allergen.id,
     name: allergen[`name_${locale}` as keyof AllergenRow] ?? allergen.name,
   }));
+  const overridesByLocationId = (overridesResult.data ?? []).reduce((acc, row) => {
+    const locationOverrides = acc.get(row.location_id) ?? [];
+    locationOverrides.push({
+      date: row.date,
+      is_closed: row.is_closed,
+      open_time: row.open_time,
+      close_time: row.close_time,
+    });
+    acc.set(row.location_id, locationOverrides);
+    return acc;
+  }, new Map<string, Array<{ date: string; is_closed: boolean; open_time: string | null; close_time: string | null }>>());
+
   const error =
     locationsResult.error?.message ??
     categoriesResult?.error?.message ??
@@ -281,6 +305,7 @@ export default async function RestaurantOrderPage({ params }: Props) {
         categories={categories}
         error={error}
         locations={locations}
+        overridesByLocationId={overridesByLocationId}
       />
     </main>
   );
