@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase-server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 import { AdminLoginForm } from "./admin-login-form";
-import { signOut, updateStripeSettings } from "./actions";
+import { signOut, toggleLocationStatus, updateStripeSettings } from "./actions";
 
 type Props = {
   searchParams?: Promise<{ updated?: string }>;
@@ -55,11 +55,18 @@ export default async function AdminPage({ searchParams }: Props) {
     );
   }
 
-  const { data: restaurant, error: restaurantError } = await supabaseAdmin
-    .from("restaurants")
-    .select("id, name, slug, stripe_account_id, payments_enabled")
-    .eq("id", membership.restaurant_id)
-    .maybeSingle();
+  const [{ data: restaurant, error: restaurantError }, { data: locations }] = await Promise.all([
+    supabaseAdmin
+      .from("restaurants")
+      .select("id, name, slug, stripe_account_id, payments_enabled")
+      .eq("id", membership.restaurant_id)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("locations")
+      .select("id, name, is_open")
+      .eq("restaurant_id", membership.restaurant_id)
+      .order("name", { ascending: true }),
+  ]);
 
   if (!restaurant) {
     return (
@@ -100,6 +107,44 @@ export default async function AdminPage({ searchParams }: Props) {
             Stripe payment settings saved.
           </p>
         ) : null}
+
+        <section className="mb-12">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold">Locations</h2>
+          </div>
+          <div className="space-y-3">
+            {(locations ?? []).map((location) => (
+              <form
+                key={location.id}
+                action={toggleLocationStatus}
+                className="flex items-center justify-between rounded-md border border-border p-4"
+              >
+                <div>
+                  <p className="text-sm font-medium">{location.name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {location.is_open ? "Open for orders" : "Closed"}
+                  </p>
+                </div>
+                <input name="locationId" type="hidden" value={location.id} />
+                <input name="restaurantId" type="hidden" value={restaurant.id} />
+                <button
+                  className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors ${
+                    location.is_open ? "bg-green-600" : "bg-gray-300"
+                  }`}
+                  name="is_open"
+                  type="submit"
+                  value={location.is_open ? "false" : "true"}
+                >
+                  <span
+                    className={`inline-block size-5 rounded-full bg-white shadow transition-transform ${
+                      location.is_open ? "translate-x-5" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </form>
+            ))}
+          </div>
+        </section>
 
         <section>
           <div className="mb-6">

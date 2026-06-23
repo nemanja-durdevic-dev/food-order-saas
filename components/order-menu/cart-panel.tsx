@@ -270,7 +270,10 @@ export function CartPanel({
           {locationName}
         </h2>
       )}
-      <div className={`no-scrollbar flex-1 overflow-y-auto pb-4 ${onClose ? "pt-16" : "pt-4"}`}>
+      <div
+        className={`no-scrollbar relative flex-1 overflow-y-auto pb-4 ${onClose ? "pt-16" : "pt-4"}`}
+      >
+        {isLocationClosed ? <div className="absolute inset-0 z-10 bg-white/85" /> : null}
         <section className="px-3.5 pb-3" aria-labelledby={orderTimingTitleId}>
           <h3 className="mb-2 text-sm font-semibold tracking-tight" id={orderTimingTitleId}>
             {t("cart.when_question")}

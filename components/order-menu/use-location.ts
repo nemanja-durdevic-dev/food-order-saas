@@ -5,10 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import type { Location, MenuCategory, OrderMenuProps } from "./types";
 import { locationStorageKey, readStoredLocationId, writeStoredLocationId } from "./storage";
 
-function isLocationAvailable(location: Location): boolean {
-  return location.is_open !== false;
-}
-
 function getCategoriesForLocation(
   categories: OrderMenuProps["categories"],
   location: Location | undefined,
@@ -39,9 +35,7 @@ export function useLocation(locations: Location[], categories: MenuCategory[]): 
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [hasHydratedLocation, setHasHydratedLocation] = useState(false);
 
-  const selectedLocation = locations.find(
-    (location) => location.id === selectedLocationId && isLocationAvailable(location),
-  );
+  const selectedLocation = locations.find((location) => location.id === selectedLocationId);
 
   const selectedCategories = useMemo(
     () => getCategoriesForLocation(categories, selectedLocation),
@@ -50,9 +44,7 @@ export function useLocation(locations: Location[], categories: MenuCategory[]): 
 
   useEffect(() => {
     const storedLocationId = readStoredLocationId();
-    const storedLocation = locations.find(
-      (location) => location.id === storedLocationId && isLocationAvailable(location),
-    );
+    const storedLocation = locations.find((location) => location.id === storedLocationId);
 
     if (storedLocation) {
       const selectTimeoutId = window.setTimeout(() => {
@@ -91,9 +83,7 @@ export function useLocation(locations: Location[], categories: MenuCategory[]): 
   }, [selectedLocation]);
 
   function selectLocation(locationId: string) {
-    const nextLocation = locations.find(
-      (location) => location.id === locationId && isLocationAvailable(location),
-    );
+    const nextLocation = locations.find((location) => location.id === locationId);
 
     if (!nextLocation) {
       return;

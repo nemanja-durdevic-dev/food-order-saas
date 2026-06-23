@@ -53,3 +53,41 @@ export async function updateStripeSettings(formData: FormData) {
   revalidatePath("/admin");
   redirect("/admin?updated=1");
 }
+
+export async function toggleLocationStatus(formData: FormData) {
+  const locationId = String(formData.get("locationId") ?? "");
+  const newStatus = formData.get("is_open") === "true";
+  const restaurantId = String(formData.get("restaurantId") ?? "");
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/admin");
+  }
+
+  const { data: membership } = await supabaseAdmin
+    .from("restaurant_members")
+    .select("id")
+    .eq("restaurant_id", restaurantId)
+    .eq("user_id", user.id)
+    .eq("role", "owner")
+    .maybeSingle();
+
+  if (!membership) {
+    throw new Error("You do not have access to update this location.");
+  }
+
+  const { error } = await supabaseAdmin
+    .from("locations")
+    .update({ is_open: newStatus })
+    .eq("id", locationId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/admin");
+}

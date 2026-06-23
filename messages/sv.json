@@ -22,6 +22,7 @@
     "choose": "Välj upphämtningsplats",
     "current": "Nuvarande plats",
     "closed": "Stängt nu",
+    "closed_message": "Denna plats är stängd och tar inte emot beställningar. Vi arbetar med att öppna den så snart som möjligt.",
     "no_locations": "Inga upphämtningsplatser är tillgängliga just nu.",
     "pickup": "Upphämtning",
     "choose_title": "Välj plats",

@@ -22,6 +22,7 @@
     "choose": "Choose pickup location",
     "current": "Current location",
     "closed": "Closed right now",
+    "closed_message": "This location is currently closed and not taking orders. We are working on opening it as soon as possible.",
     "no_locations": "No pickup locations are available right now.",
     "pickup": "Pickup",
     "choose_title": "Choose location",

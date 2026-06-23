@@ -98,6 +98,12 @@ export function OrderMenu({
 
   const closingTime = getTodayClosingTime(selectedLocation?.opening_hours);
   const isOpenNow = isCurrentlyOpen(selectedLocation?.opening_hours);
+  const isLocationEffectivelyClosed = selectedLocation
+    ? selectedLocation.is_open === false || isOpenNow === false
+    : false;
+  const isLocationEffectivelyOpen = selectedLocation
+    ? selectedLocation.is_open !== false && isOpenNow !== false
+    : null;
 
   const cart = useCart(selectedCategories, selectedLocation);
   const {
@@ -388,7 +394,7 @@ export function OrderMenu({
   }
 
   function openItemDetails(item: MenuItem) {
-    if (isOpenNow === false) {
+    if (isLocationEffectivelyClosed) {
       toast.error(`${t("location.closed")}, ${t("location.cannot_order")}`);
       return;
     }
@@ -634,7 +640,7 @@ export function OrderMenu({
         closingTime={closingTime}
         isLoading={!hasHydratedLocation}
         isAuthLoading={isAuthLoading}
-        isOpenNow={isOpenNow}
+        isOpenNow={isLocationEffectivelyOpen}
         onOpenAuth={openAuth}
         onOpenLocation={openLocation}
         onOpenInfo={openInfo}
@@ -650,6 +656,8 @@ export function OrderMenu({
               isClosing={isInfoClosing}
               onClose={closeInfo}
               address={selectedLocation?.address ?? null}
+              isManuallyClosed={selectedLocation?.is_open === false}
+              isOpenNow={isOpenNow ?? true}
               openingHours={selectedLocation?.opening_hours ?? null}
               phone={selectedLocation?.phone ?? null}
               title={selectedLocation?.name ?? null}
@@ -695,7 +703,7 @@ export function OrderMenu({
                   cartSubtotal={cartSubtotal}
                   decrementCartItem={decrementCartItem}
                   incrementCartItem={incrementCartItem}
-                  isLocationClosed={isOpenNow === false}
+                  isLocationClosed={isLocationEffectivelyClosed}
                   key={selectedLocation.id}
                   locationId={selectedLocation.id}
                   locationName={selectedLocation.name}
@@ -864,6 +872,8 @@ export function OrderMenu({
               <RestaurantInfoContent
                 contentLayout="responsive"
                 address={selectedLocation.address}
+                isManuallyClosed={selectedLocation.is_open === false}
+                isOpenNow={isOpenNow ?? true}
                 openingHours={selectedLocation.opening_hours}
                 phone={selectedLocation.phone}
                 title={selectedLocation.name}
@@ -977,38 +987,44 @@ function LocationDialog({
         </h2>
       </div>
       <div className="no-scrollbar flex-1 space-y-3 overflow-y-auto p-5">
-        {locations.filter((l) => l.is_open !== false).length === 0 ? (
+        {locations.length === 0 ? (
           <div className="rounded-2xl bg-card p-5 text-sm font-semibold text-muted-foreground">
             {t("location.no_locations")}
           </div>
         ) : null}
 
         {locations.map((location) => {
-          if (location.is_open === false) return null;
-
           const isSelected = location.id === selectedLocationId;
+          const isManuallyClosed = location.is_open === false;
+          const isClosedNow = isCurrentlyOpen(location.opening_hours) === false;
 
           return (
             <button
               aria-current={isSelected ? "true" : undefined}
               className={`flex w-full cursor-pointer items-start gap-4 rounded-2xl border border-border bg-card p-4 text-left transition-all hover:bg-secondary active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 aria-current:border-primary aria-current:bg-primary/10 ${
-                isCurrentlyOpen(location.opening_hours) === false ? "opacity-60" : ""
+                isClosedNow ? "opacity-60" : ""
               }`}
               key={location.id}
               onClick={() => onSelectLocation(location.id)}
               type="button"
             >
-              <LocationThumbnail location={location} variant="open" />
+              <LocationThumbnail
+                location={location}
+                variant={isManuallyClosed ? "closed" : "open"}
+              />
               <span className="min-w-0 flex-1">
                 <span className="block text-base font-black tracking-tight">{location.name}</span>
                 {location.address ? (
-                  <span className="mt-1 block text-sm font-semibold leading-5 text-muted-foreground">
+                  <span className="mt-1 block text-sm font-medium leading-5 text-muted-foreground">
                     {location.address}
-                  </span>
-                ) : null}
-                {isCurrentlyOpen(location.opening_hours) === false ? (
-                  <span className="mt-1 block text-sm font-semibold text-destructive">
-                    {t("location.closed")}
+                    <span className="mx-1.5 text-muted-foreground/40">|</span>
+                    <span
+                      className={
+                        isManuallyClosed || isClosedNow ? "text-destructive" : "text-green-400"
+                      }
+                    >
+                      {isManuallyClosed || isClosedNow ? t("location.closed") : t("location.open")}
+                    </span>
                   </span>
                 ) : null}
               </span>
@@ -1229,6 +1245,8 @@ function AllergenActivatedModal({
 function RestaurantInfoDialog({
   address,
   isClosing,
+  isManuallyClosed,
+  isOpenNow,
   onClose,
   openingHours,
   phone,
@@ -1236,6 +1254,8 @@ function RestaurantInfoDialog({
 }: {
   address: string | null;
   isClosing: boolean;
+  isManuallyClosed?: boolean;
+  isOpenNow?: boolean;
   onClose: () => void;
   openingHours: OpeningHour[] | null;
   phone: string | null;
@@ -1270,6 +1290,8 @@ function RestaurantInfoDialog({
         <div className="no-scrollbar flex-1 overflow-y-auto">
           <RestaurantInfoContent
             address={address}
+            isManuallyClosed={isManuallyClosed}
+            isOpenNow={isOpenNow}
             openingHours={openingHours}
             phone={phone}
             title={title}

@@ -22,6 +22,7 @@
     "choose": "Velg hentested",
     "current": "Nåværende sted",
     "closed": "Stengt nå",
+    "closed_message": "Dette stedet er stengt og tar ikke imot bestillinger. Vi jobber med å åpne det så snart som mulig.",
     "no_locations": "Ingen hentesteder er tilgjengelige akkurat nå.",
     "pickup": "Hentested",
     "choose_title": "Velg sted",

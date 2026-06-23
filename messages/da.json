@@ -22,6 +22,7 @@
     "choose": "Vælg afhentningssted",
     "current": "Nuværende sted",
     "closed": "Lukket nu",
+    "closed_message": "Dette sted er lukket og tager ikke imod bestillinger. Vi arbejder på at åbne det så hurtigt som muligt.",
     "no_locations": "Ingen afhentningssteder er tilgængelige lige nu.",
     "pickup": "Afhentning",
     "choose_title": "Vælg sted",

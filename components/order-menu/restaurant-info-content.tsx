@@ -11,6 +11,8 @@ import { getScheduleForDisplay } from "./opening-hours";
 type RestaurantInfoContentProps = {
   address: string | null;
   contentLayout?: "stacked" | "responsive";
+  isManuallyClosed?: boolean;
+  isOpenNow?: boolean;
   openingHours: OpeningHour[] | null;
   phone: string | null;
   title?: string | null;
@@ -20,6 +22,8 @@ type RestaurantInfoContentProps = {
 export function RestaurantInfoContent({
   address,
   contentLayout = "stacked",
+  isManuallyClosed = false,
+  isOpenNow = true,
   openingHours,
   phone,
   titleId,
@@ -35,7 +39,9 @@ export function RestaurantInfoContent({
 
   const content = (
     <>
-      {days.length > 0 ? <OpeningHours days={days} /> : null}
+      {days.length > 0 ? (
+        <OpeningHours days={days} isManuallyClosed={isManuallyClosed} isOpenNow={isOpenNow} />
+      ) : null}
       <Address address={address} />
       <ContactInformation phone={phone} />
     </>
@@ -68,20 +74,33 @@ export function RestaurantInfoContent({
   );
 }
 
-function OpeningHours({ days }: { days: Array<{ day: string; dayKey: string; hours: string }> }) {
+function OpeningHours({
+  days,
+  isManuallyClosed,
+  isOpenNow,
+}: {
+  days: Array<{ day: string; dayKey: string; hours: string }>;
+  isManuallyClosed: boolean;
+  isOpenNow: boolean;
+}) {
   const t = useTranslations();
+  const closed = isManuallyClosed || !isOpenNow;
 
   return (
     <section>
-      <h3 className="text-xl font-medium sm:text-2xl">{t("restaurant.opening_hours")}</h3>
-      <dl className="mt-5 divide-y divide-black/10 text-base sm:text-lg">
-        {days.map((item) => (
-          <div className="flex items-center justify-between gap-6 py-3.5 sm:py-4" key={item.day}>
-            <dt>{t(`days.${item.dayKey}`)}</dt>
-            <dd className="text-right text-[#62676f]">{item.hours}</dd>
-          </div>
-        ))}
-      </dl>
+      <h3 className="text-xl font-semibold sm:text-2xl">{t("restaurant.opening_hours")}</h3>
+      {closed ? (
+        <p className="mt-2 text-sm font-medium text-black">{t("location.closed_message")}</p>
+      ) : (
+        <dl className="mt-2 divide-y divide-black/10 text-base sm:text-lg">
+          {days.map((item) => (
+            <div className="flex items-center justify-between gap-6 py-3.5 sm:py-4" key={item.day}>
+              <dt>{t(`days.${item.dayKey}`)}</dt>
+              <dd className="text-right text-[#62676f]">{item.hours}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </section>
   );
 }

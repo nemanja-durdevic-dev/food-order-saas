@@ -216,29 +216,31 @@ export function LocationHero({
           </button>
         )}
         {selectedLocationName ? (
-          <>
+          isOpenNow ? (
+            <>
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-center text-sm text-green-400">{t("location.open")}</span>
+                {closingTime ? (
+                  <>
+                    <span className="text-sm text-gray-500">|</span>
+                    <span className="text-sm text-gray-500">
+                      {t("location.closes_at", { time: closingTime })}
+                    </span>
+                  </>
+                ) : null}
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                <Clock className="size-4 text-gray-500" />
+                <span className="text-sm text-gray-500">
+                  {t("location.preparation_time", { time: preparationTime })}
+                </span>
+              </div>
+            </>
+          ) : (
             <div className="flex items-center justify-center gap-2">
-              <span
-                className={`text-center text-sm ${isOpenNow ? "text-green-400" : "text-red-400"}`}
-              >
-                {isOpenNow ? t("location.open") : t("location.closed")}
-              </span>
-              {closingTime ? (
-                <>
-                  <span className="text-sm text-gray-500">|</span>
-                  <span className="text-sm text-gray-500">
-                    {t("location.closes_at", { time: closingTime })}
-                  </span>
-                </>
-              ) : null}
+              <span className="text-center text-sm text-destructive">{t("location.closed")}</span>
             </div>
-            <div className="flex items-center justify-center gap-2">
-              <Clock className="size-4 text-gray-500" />
-              <span className="text-sm text-gray-500">
-                {t("location.preparation_time", { time: preparationTime })}
-              </span>
-            </div>
-          </>
+          )
         ) : null}
       </div>
     </>
