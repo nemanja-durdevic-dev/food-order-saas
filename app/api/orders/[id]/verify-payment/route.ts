@@ -8,7 +8,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   const { data: order, error: orderError } = await supabaseAdmin
     .from("orders")
-    .select("payment_status, stripe_session_id, vipps_payment_reference")
+    .select("payment_status, restaurant_id, stripe_session_id, vipps_payment_reference")
     .eq("id", id)
     .single();
 
@@ -23,7 +23,19 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   // Stripe payment verification
   if (order.stripe_session_id) {
     try {
-      const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
+      const { data: restaurant, error: restaurantError } = await supabaseAdmin
+        .from("restaurants")
+        .select("stripe_account_id")
+        .eq("id", order.restaurant_id)
+        .single();
+
+      if (restaurantError || !restaurant?.stripe_account_id) {
+        return NextResponse.json({ error: "Stripe account not configured" }, { status: 500 });
+      }
+
+      const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id, {
+        stripeAccount: restaurant.stripe_account_id,
+      });
 
       const isPaid = session.payment_status === "paid" || session.status === "complete";
 

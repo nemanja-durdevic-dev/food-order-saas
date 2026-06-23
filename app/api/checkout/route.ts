@@ -28,8 +28,6 @@ type CheckoutBody = {
   subtotal: number;
 };
 
-const PLATFORM_FEE_AMOUNT = 200;
-
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("Authorization");
 
@@ -148,31 +146,30 @@ export async function POST(request: NextRequest) {
 
     const origin = request.headers.get("origin") ?? "http://localhost:3000";
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"] as Stripe.Checkout.SessionCreateParams.PaymentMethodType[],
-      metadata: {
-        order_id: order.id,
-      },
-      line_items: body.cartItems.map((item: CartItemInput) => ({
-        price_data: {
-          currency: "nok",
-          product_data: {
-            name: item.name,
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode: "payment",
+        payment_method_types: ["card"] as Stripe.Checkout.SessionCreateParams.PaymentMethodType[],
+        metadata: {
+          order_id: order.id,
+        },
+        line_items: body.cartItems.map((item: CartItemInput) => ({
+          price_data: {
+            currency: "nok",
+            product_data: {
+              name: item.name,
+            },
+            unit_amount: Math.round(item.unitPrice * 100),
           },
-          unit_amount: Math.round(item.unitPrice * 100),
-        },
-        quantity: item.quantity,
-      })),
-      payment_intent_data: {
-        application_fee_amount: PLATFORM_FEE_AMOUNT,
-        transfer_data: {
-          destination: restaurant.stripe_account_id,
-        },
+          quantity: item.quantity,
+        })),
+        success_url: `${origin}/order/${order.id}`,
+        cancel_url: `${origin}/order`,
       },
-      success_url: `${origin}/order/${order.id}`,
-      cancel_url: `${origin}/order`,
-    });
+      {
+        stripeAccount: restaurant.stripe_account_id,
+      },
+    );
 
     await supabaseAdmin.from("orders").update({ stripe_session_id: session.id }).eq("id", order.id);
 
