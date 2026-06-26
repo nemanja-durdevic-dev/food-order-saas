@@ -1,31 +1,20 @@
-import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 
-import { AdminLoginForm } from "./admin-login-form";
+import { getAdminResource } from "@/lib/admin/resources";
+import { AdminCollectionPage } from "./_components/admin-collection-page";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+type Props = {
+  searchParams?: Promise<{ page?: string; q?: string }>;
+};
 
-  if (!user) {
-    return <AdminLoginForm />;
-  }
+export default async function AdminPage({ searchParams }: Props) {
+  const resource = getAdminResource("locations");
 
-  const { data: membership } = await supabase
-    .from("restaurant_members")
-    .select("restaurant_id, role")
-    .eq("user_id", user.id)
-    .in("role", ["admin", "owner"])
-    .limit(1)
-    .maybeSingle();
-
-  if (!membership) {
+  if (!resource) {
     redirect("/");
   }
 
-  return null;
+  return <AdminCollectionPage resource={resource} searchParams={searchParams} />;
 }
