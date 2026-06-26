@@ -200,9 +200,11 @@ export function MenuItemCard({
         {item.image_url ? (
           <div className={menuItemMediaClass}>
             <Image
-              alt=""
+              alt={item.name}
               className="h-full w-full object-cover"
+              decoding="async"
               height={128}
+              loading="lazy"
               sizes="(min-width: 640px) 128px, 112px"
               src={item.image_url}
               width={128}
