@@ -76,40 +76,98 @@ with restaurant as (
     brand_color = excluded.brand_color,
     status = excluded.status
   returning id
-), menu_seed(category_name, name, description, image_url, price) as (
+), subcategory_seed(category_name, name, name_no, name_sv, name_da, sort_order) as (
   values
-    ('Burgers', 'Classic Burger', 'Beef patty, cheddar, lettuce, tomato, pickles, and house sauce.', 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=600&fit=crop', 129.00),
-    ('Burgers', 'Smash Double', 'Two crispy beef patties, American cheese, onion, pickles, and burger sauce.', 'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=600&h=600&fit=crop', 159.00),
-    ('Burgers', 'BBQ Bacon Burger', 'Beef patty, bacon, cheddar, fried onions, and smoky barbecue sauce.', 'https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=600&h=600&fit=crop', 169.00),
-    ('Burgers', 'Veggie Halloumi Burger', 'Grilled halloumi, roasted peppers, lettuce, tomato, and herb mayo.', 'https://images.unsplash.com/photo-1586816001966-79b736744398?w=600&h=600&fit=crop', 145.00),
-    ('Chicken', 'Crispy Chicken Burger', 'Crispy chicken, slaw, pickles, and spicy mayo.', 'https://images.unsplash.com/photo-1603064752734-4c48eff53d05?w=600&h=600&fit=crop', 149.00),
-    ('Chicken', 'Hot Honey Chicken', 'Fried chicken tossed with hot honey, pickles, and creamy ranch.', 'https://images.unsplash.com/photo-1562967914-608f82629710?w=600&h=600&fit=crop', 155.00),
-    ('Chicken', 'Chicken Tenders', 'Five crispy chicken tenders served with garlic dip.', 'https://images.unsplash.com/photo-1562967916-eb82221dfb92?w=600&h=600&fit=crop', 119.00),
-    ('Bowls', 'Loaded Beef Bowl', 'Seasoned beef, fries, cheddar, jalapenos, tomato salsa, and sour cream.', 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=600&fit=crop', 149.00),
-    ('Bowls', 'Crispy Chicken Bowl', 'Crispy chicken, rice, slaw, cucumber, pickled onion, and spicy mayo.', 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&h=600&fit=crop', 139.00),
-    ('Bowls', 'Green Falafel Bowl', 'Falafel, rice, greens, hummus, cucumber, tomato, and lemon dressing.', 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=600&h=600&fit=crop', 129.00),
-    ('Sides', 'Fries', 'Golden crispy fries finished with sea salt.', 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=600&h=600&fit=crop', 49.00),
-    ('Sides', 'Sweet Potato Fries', 'Crispy sweet potato fries with chipotle mayo.', 'https://images.unsplash.com/photo-1543352634-a1c51d9f1fa7?w=600&h=600&fit=crop', 65.00),
-    ('Sides', 'Onion Rings', 'Crispy battered onion rings with ranch dip.', 'https://images.unsplash.com/photo-1639024471283-03518883512d?w=600&h=600&fit=crop', 59.00),
-    ('Sides', 'Mozzarella Sticks', 'Six mozzarella sticks served with tomato dip.', 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&h=600&fit=crop', 79.00),
-    ('Drinks', 'Cola', 'Cold canned cola.', 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=600&h=600&fit=crop', 35.00),
-    ('Drinks', 'Cola Zero', 'Cold canned cola without sugar.', 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=600&h=600&fit=crop', 35.00),
-    ('Drinks', 'House Lemonade', 'Fresh lemonade with bright citrus and mint.', 'https://images.unsplash.com/photo-1513558003720-343f3a99d97b?w=600&h=600&fit=crop', 45.00),
-    ('Drinks', 'Sparkling Water', 'Cold sparkling mineral water.', 'https://images.unsplash.com/photo-1523362628745-0c100150b504?w=600&h=600&fit=crop', 32.00),
-    ('Desserts', 'Chocolate Brownie', 'Warm chocolate brownie with a soft center.', 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=600&h=600&fit=crop', 69.00),
-    ('Desserts', 'Cinnamon Churros', 'Crispy churros tossed in cinnamon sugar with chocolate dip.', 'https://images.unsplash.com/photo-1509365465985-25d11c17e812?w=600&h=600&fit=crop', 75.00),
-    ('Desserts', 'Vanilla Milkshake', 'Creamy vanilla milkshake topped with whipped cream.', 'https://images.unsplash.com/photo-1653122025451-ec76a73f8a08?w=600&h=600&fit=crop', 79.00),
-    ('Kids', 'Kids Burger Meal', 'Small cheeseburger, fries, and a juice box.', 'https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=600&h=600&fit=crop', 99.00),
-    ('Kids', 'Kids Tenders Meal', 'Three chicken tenders, fries, and a juice box.', 'https://images.unsplash.com/photo-1615361200141-f45040f367be?w=600&h=600&fit=crop', 99.00),
-    ('Kids', 'Kids Fries', 'Small portion of crispy fries with ketchup.', 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=600&h=600&fit=crop', 39.00)
+    ('Burgers', 'Beef Burgers', 'Biffburgere', 'Nötköttsburgare', 'Bøfburgere', 10),
+    ('Burgers', 'Vegetarian Burgers', 'Vegetarburgere', 'Vegetariska burgare', 'Vegetarburgere', 20),
+    ('Chicken', 'Burgers', 'Burgere', 'Burgare', 'Burgere', 10),
+    ('Chicken', 'Chicken Pieces', 'Kyllingbiter', 'Kycklingbitar', 'Kyllingestykker', 20),
+    ('Bowls', 'Meat Bowls', 'Kjøttbowler', 'Köttbowlar', 'Kødbowls', 10),
+    ('Bowls', 'Vegetarian Bowls', 'Vegetarbowler', 'Vegetariska bowlar', 'Vegetarbowls', 20),
+    ('Sides', 'Fries', 'Pommes frites', 'Pommes frites', 'Pommes frites', 10),
+    ('Sides', 'Snacks', 'Snacks', 'Snacks', 'Snacks', 20)
 )
-insert into public.menu_items (restaurant_id, category_id, name, description, image_url, price, is_available)
-select restaurant.id, categories.id, menu_seed.name, menu_seed.description, menu_seed.image_url, menu_seed.price, true
+insert into public.subcategories (restaurant_id, category_id, name, name_no, name_sv, name_da, sort_order)
+select restaurant.id, categories.id, subcategory_seed.name, subcategory_seed.name_no, subcategory_seed.name_sv, subcategory_seed.name_da, subcategory_seed.sort_order
+from restaurant
+join subcategory_seed on true
+join public.categories on categories.restaurant_id = restaurant.id and categories.name = subcategory_seed.category_name
+on conflict (category_id, name) do update set
+  restaurant_id = excluded.restaurant_id,
+  name_no = excluded.name_no,
+  name_sv = excluded.name_sv,
+  name_da = excluded.name_da,
+  sort_order = excluded.sort_order;
+
+with restaurant as (
+  select id from public.restaurants where slug = 'burger-house'
+), kept_subcategories(category_name, name) as (
+  values
+    ('Burgers', 'Beef Burgers'),
+    ('Burgers', 'Vegetarian Burgers'),
+    ('Chicken', 'Burgers'),
+    ('Chicken', 'Chicken Pieces'),
+    ('Bowls', 'Meat Bowls'),
+    ('Bowls', 'Vegetarian Bowls'),
+    ('Sides', 'Fries'),
+    ('Sides', 'Snacks')
+)
+delete from public.subcategories
+using restaurant, public.categories
+where subcategories.restaurant_id = restaurant.id
+  and categories.id = subcategories.category_id
+  and not exists (
+    select 1
+    from kept_subcategories
+    where kept_subcategories.category_name = categories.name
+      and kept_subcategories.name = subcategories.name
+  );
+
+with restaurant as (
+  insert into public.restaurants (name, slug, description, brand_color, status)
+  values ('Burger House', 'burger-house', 'Fresh burgers, bowls, sides, and pickup favorites.', '#f97316', 'active')
+  on conflict (slug) do update set
+    name = excluded.name,
+    description = excluded.description,
+    brand_color = excluded.brand_color,
+    status = excluded.status
+  returning id
+), menu_seed(category_name, subcategory_name, name, description, image_url, price) as (
+  values
+    ('Burgers', 'Beef Burgers', 'Classic Burger', 'Beef patty, cheddar, lettuce, tomato, pickles, and house sauce.', 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=600&fit=crop', 129.00),
+    ('Burgers', 'Beef Burgers', 'Smash Double', 'Two crispy beef patties, American cheese, onion, pickles, and burger sauce.', 'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=600&h=600&fit=crop', 159.00),
+    ('Burgers', 'Beef Burgers', 'BBQ Bacon Burger', 'Beef patty, bacon, cheddar, fried onions, and smoky barbecue sauce.', 'https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=600&h=600&fit=crop', 169.00),
+    ('Burgers', 'Vegetarian Burgers', 'Veggie Halloumi Burger', 'Grilled halloumi, roasted peppers, lettuce, tomato, and herb mayo.', 'https://images.unsplash.com/photo-1586816001966-79b736744398?w=600&h=600&fit=crop', 145.00),
+    ('Chicken', 'Burgers', 'Crispy Chicken Burger', 'Crispy chicken, slaw, pickles, and spicy mayo.', 'https://images.unsplash.com/photo-1603064752734-4c48eff53d05?w=600&h=600&fit=crop', 149.00),
+    ('Chicken', 'Chicken Pieces', 'Hot Honey Chicken', 'Fried chicken tossed with hot honey, pickles, and creamy ranch.', 'https://images.unsplash.com/photo-1562967914-608f82629710?w=600&h=600&fit=crop', 155.00),
+    ('Chicken', 'Chicken Pieces', 'Chicken Tenders', 'Five crispy chicken tenders served with garlic dip.', 'https://images.unsplash.com/photo-1562967916-eb82221dfb92?w=600&h=600&fit=crop', 119.00),
+    ('Bowls', 'Meat Bowls', 'Loaded Beef Bowl', 'Seasoned beef, fries, cheddar, jalapenos, tomato salsa, and sour cream.', 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=600&fit=crop', 149.00),
+    ('Bowls', 'Meat Bowls', 'Crispy Chicken Bowl', 'Crispy chicken, rice, slaw, cucumber, pickled onion, and spicy mayo.', 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&h=600&fit=crop', 139.00),
+    ('Bowls', 'Vegetarian Bowls', 'Green Falafel Bowl', 'Falafel, rice, greens, hummus, cucumber, tomato, and lemon dressing.', 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=600&h=600&fit=crop', 129.00),
+    ('Sides', 'Fries', 'Fries', 'Golden crispy fries finished with sea salt.', 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=600&h=600&fit=crop', 49.00),
+    ('Sides', 'Fries', 'Sweet Potato Fries', 'Crispy sweet potato fries with chipotle mayo.', 'https://images.unsplash.com/photo-1543352634-a1c51d9f1fa7?w=600&h=600&fit=crop', 65.00),
+    ('Sides', 'Snacks', 'Onion Rings', 'Crispy battered onion rings with ranch dip.', 'https://images.unsplash.com/photo-1639024471283-03518883512d?w=600&h=600&fit=crop', 59.00),
+    ('Sides', 'Snacks', 'Mozzarella Sticks', 'Six mozzarella sticks served with tomato dip.', 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&h=600&fit=crop', 79.00),
+    ('Drinks', null, 'Cola', 'Cold canned cola.', 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=600&h=600&fit=crop', 35.00),
+    ('Drinks', null, 'Cola Zero', 'Cold canned cola without sugar.', 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=600&h=600&fit=crop', 35.00),
+    ('Drinks', null, 'House Lemonade', 'Fresh lemonade with bright citrus and mint.', 'https://images.unsplash.com/photo-1513558003720-343f3a99d97b?w=600&h=600&fit=crop', 45.00),
+    ('Drinks', null, 'Sparkling Water', 'Cold sparkling mineral water.', 'https://images.unsplash.com/photo-1523362628745-0c100150b504?w=600&h=600&fit=crop', 32.00),
+    ('Desserts', null, 'Chocolate Brownie', 'Warm chocolate brownie with a soft center.', 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=600&h=600&fit=crop', 69.00),
+    ('Desserts', null, 'Cinnamon Churros', 'Crispy churros tossed in cinnamon sugar with chocolate dip.', 'https://images.unsplash.com/photo-1509365465985-25d11c17e812?w=600&h=600&fit=crop', 75.00),
+    ('Desserts', null, 'Vanilla Milkshake', 'Creamy vanilla milkshake topped with whipped cream.', 'https://images.unsplash.com/photo-1653122025451-ec76a73f8a08?w=600&h=600&fit=crop', 79.00),
+    ('Kids', null, 'Kids Burger Meal', 'Small cheeseburger, fries, and a juice box.', 'https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=600&h=600&fit=crop', 99.00),
+    ('Kids', null, 'Kids Tenders Meal', 'Three chicken tenders, fries, and a juice box.', 'https://images.unsplash.com/photo-1615361200141-f45040f367be?w=600&h=600&fit=crop', 99.00),
+    ('Kids', null, 'Kids Fries', 'Small portion of crispy fries with ketchup.', 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=600&h=600&fit=crop', 39.00)
+)
+insert into public.menu_items (restaurant_id, category_id, subcategory_id, name, description, image_url, price, is_available)
+select restaurant.id, categories.id, subcategories.id, menu_seed.name, menu_seed.description, menu_seed.image_url, menu_seed.price, true
 from restaurant
 join menu_seed on true
 join public.categories on categories.restaurant_id = restaurant.id and categories.name = menu_seed.category_name
+left join public.subcategories on subcategories.restaurant_id = restaurant.id and subcategories.category_id = categories.id and subcategories.name = menu_seed.subcategory_name
 on conflict (restaurant_id, name) do update set
   category_id = excluded.category_id,
+  subcategory_id = excluded.subcategory_id,
   description = excluded.description,
   image_url = excluded.image_url,
   price = excluded.price,

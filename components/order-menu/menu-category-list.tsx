@@ -18,6 +18,7 @@ type MenuCategoryListProps = {
   onOpenAllergens: () => void;
   onOpenItemDetails: (item: MenuItem) => void;
   selectedAllergenIds: string[];
+  subcategoryRefs: RefObject<Record<string, HTMLElement | null>>;
 };
 
 export function MenuCategoryList({
@@ -28,17 +29,22 @@ export function MenuCategoryList({
   onOpenAllergens,
   onOpenItemDetails,
   selectedAllergenIds,
+  subcategoryRefs,
 }: MenuCategoryListProps) {
   const t = useTranslations();
 
   return (
     <div className={`space-y-10 ${hasBottomCartSpace ? "pb-24" : ""}`}>
       {categories.map((category, index) => {
-        const items = category.menu_items;
+        const hasSubcategories = category.subcategories.length > 0;
+        const subcategoryIds = new Set(category.subcategories.map((subcategory) => subcategory.id));
+        const uncategorizedItems = category.menu_items.filter(
+          (item) => !item.subcategory_id || !subcategoryIds.has(item.subcategory_id),
+        );
 
         return (
           <section
-            className="min-w-0 scroll-mt-24"
+            className="min-w-0 scroll-mt-40"
             data-category-id={category.id}
             key={category.id}
             ref={(element) => {
@@ -62,18 +68,64 @@ export function MenuCategoryList({
                 </button>
               ) : null}
             </div>
-            <div className="grid min-w-0 gap-4">
-              {items.map((item, itemIndex) => (
-                <MenuItemCard
-                  item={item}
-                  itemCartQuantity={getItemCartQuantity(item.id)}
-                  key={item.id}
-                  onOpenItemDetails={onOpenItemDetails}
-                  placeholderAccent={accents[itemIndex % accents.length]}
-                  selectedAllergenIds={selectedAllergenIds}
-                />
-              ))}
-            </div>
+            {hasSubcategories ? (
+              <div className="space-y-8">
+                {category.subcategories.map((subcategory) => (
+                  <section
+                    className="scroll-mt-40"
+                    data-category-id={category.id}
+                    data-subcategory-id={subcategory.id}
+                    key={subcategory.id}
+                    ref={(element) => {
+                      subcategoryRefs.current[subcategory.id] = element;
+                    }}
+                  >
+                    <h3 className="mb-3 text-lg font-semibold tracking-tight text-foreground">
+                      {subcategory.name}
+                    </h3>
+                    <div className="grid min-w-0 gap-4">
+                      {subcategory.menu_items.map((item, itemIndex) => (
+                        <MenuItemCard
+                          item={item}
+                          itemCartQuantity={getItemCartQuantity(item.id)}
+                          key={item.id}
+                          onOpenItemDetails={onOpenItemDetails}
+                          placeholderAccent={accents[itemIndex % accents.length]}
+                          selectedAllergenIds={selectedAllergenIds}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ))}
+                {uncategorizedItems.length > 0 ? (
+                  <div className="grid min-w-0 gap-4">
+                    {uncategorizedItems.map((item, itemIndex) => (
+                      <MenuItemCard
+                        item={item}
+                        itemCartQuantity={getItemCartQuantity(item.id)}
+                        key={item.id}
+                        onOpenItemDetails={onOpenItemDetails}
+                        placeholderAccent={accents[itemIndex % accents.length]}
+                        selectedAllergenIds={selectedAllergenIds}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="grid min-w-0 gap-4">
+                {category.menu_items.map((item, itemIndex) => (
+                  <MenuItemCard
+                    item={item}
+                    itemCartQuantity={getItemCartQuantity(item.id)}
+                    key={item.id}
+                    onOpenItemDetails={onOpenItemDetails}
+                    placeholderAccent={accents[itemIndex % accents.length]}
+                    selectedAllergenIds={selectedAllergenIds}
+                  />
+                ))}
+              </div>
+            )}
           </section>
         );
       })}

@@ -9,12 +9,20 @@ export type MenuItem = {
   description: string | null;
   image_url: string | null;
   price: number | string;
+  subcategory_id?: string | null;
+};
+
+export type MenuSubcategory = {
+  id: string;
+  name: string;
+  menu_items: MenuItem[];
 };
 
 export type MenuCategory = {
   id: string;
   name: string;
   menu_items: MenuItem[];
+  subcategories: MenuSubcategory[];
 };
 
 export type ModifierOption = {

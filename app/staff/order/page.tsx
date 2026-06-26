@@ -12,9 +12,20 @@ type CategoryRow = {
   sort_order: number;
 };
 
+type SubcategoryRow = {
+  id: string;
+  category_id: string;
+  name: string;
+  name_no: string | null;
+  name_sv: string | null;
+  name_da: string | null;
+  sort_order: number;
+};
+
 type MenuItemRow = {
   id: string;
   category_id: string | null;
+  subcategory_id: string | null;
   is_available: boolean;
   name: string;
   name_no: string | null;
@@ -106,35 +117,46 @@ export default async function StaffOrderPage() {
 
   const locale = "en";
 
-  const [categoriesResult, menuItemsResult, ingredientsResult, allergensResult, addOnsResult] =
-    await Promise.all([
-      supabase
-        .from("categories")
-        .select("id, name, name_no, name_sv, name_da, sort_order")
-        .order("sort_order", { ascending: true })
-        .order("name", { ascending: true }),
-      supabase
-        .from("menu_items")
-        .select(
-          "id, category_id, is_available, name, name_no, name_sv, name_da, description, description_no, description_sv, description_da, image_url, price",
-        )
-        .order("name", { ascending: true }),
-      supabase
-        .from("menu_item_ingredients")
-        .select("menu_item_id, ingredient_id, ingredients(name, name_no, name_sv, name_da)")
-        .eq("is_removable", true)
-        .order("sort_order", { ascending: true }),
-      supabase
-        .from("menu_item_allergens")
-        .select("menu_item_id, allergen_id, allergens(name, name_no, name_sv, name_da)")
-        .order("sort_order", { ascending: true }),
-      supabase
-        .from("menu_item_add_on_options")
-        .select(
-          "menu_item_id, add_on_option_id, add_on_options(name, price, name_no, name_sv, name_da)",
-        )
-        .order("sort_order", { ascending: true }),
-    ]);
+  const [
+    categoriesResult,
+    subcategoriesResult,
+    menuItemsResult,
+    ingredientsResult,
+    allergensResult,
+    addOnsResult,
+  ] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("id, name, name_no, name_sv, name_da, sort_order")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+    supabase
+      .from("subcategories")
+      .select("id, category_id, name, name_no, name_sv, name_da, sort_order")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+    supabase
+      .from("menu_items")
+      .select(
+        "id, category_id, subcategory_id, is_available, name, name_no, name_sv, name_da, description, description_no, description_sv, description_da, image_url, price",
+      )
+      .order("name", { ascending: true }),
+    supabase
+      .from("menu_item_ingredients")
+      .select("menu_item_id, ingredient_id, ingredients(name, name_no, name_sv, name_da)")
+      .eq("is_removable", true)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("menu_item_allergens")
+      .select("menu_item_id, allergen_id, allergens(name, name_no, name_sv, name_da)")
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("menu_item_add_on_options")
+      .select(
+        "menu_item_id, add_on_option_id, add_on_options(name, price, name_no, name_sv, name_da)",
+      )
+      .order("sort_order", { ascending: true }),
+  ]);
 
   const menuItems = ((menuItemsResult?.data ?? []) as MenuItemRow[]).map((item) => ({
     ...item,
@@ -189,14 +211,29 @@ export default async function StaffOrderPage() {
     return addOns;
   }, new Map<string, Array<{ id: string; name: string; price: number }>>());
 
+  const subcategoriesByCategoryId = ((subcategoriesResult?.data ?? []) as SubcategoryRow[]).reduce(
+    (subcategories, subcategory) => {
+      const categorySubcategories = subcategories.get(subcategory.category_id) ?? [];
+      categorySubcategories.push({
+        ...subcategory,
+        name:
+          (subcategory[`name_${locale}` as keyof SubcategoryRow] as string | null) ??
+          subcategory.name,
+      });
+      subcategories.set(subcategory.category_id, categorySubcategories);
+
+      return subcategories;
+    },
+    new Map<string, SubcategoryRow[]>(),
+  );
+
   const categories = ((categoriesResult?.data ?? []) as CategoryRow[])
     .map((cat) => ({
       ...cat,
       name: cat[`name_${locale}` as keyof CategoryRow] ?? cat.name,
     }))
-    .map((category) => ({
-      ...category,
-      menu_items: menuItems
+    .map((category) => {
+      const categoryMenuItems = menuItems
         .filter((item) => item.category_id === category.id)
         .map((item) => ({
           ...item,
@@ -204,8 +241,19 @@ export default async function StaffOrderPage() {
           allergens: allergensByItemId.get(item.id) ?? [],
           availableLocationIds: [],
           ingredients: ingredientsByItemId.get(item.id) ?? [],
-        })),
-    }))
+        }));
+
+      return {
+        ...category,
+        menu_items: categoryMenuItems,
+        subcategories: (subcategoriesByCategoryId.get(category.id) ?? [])
+          .map((subcategory) => ({
+            ...subcategory,
+            menu_items: categoryMenuItems.filter((item) => item.subcategory_id === subcategory.id),
+          }))
+          .filter((subcategory) => subcategory.menu_items.length > 0),
+      };
+    })
     .filter((category) => category.menu_items.length > 0) as MenuCategory[];
 
   return (

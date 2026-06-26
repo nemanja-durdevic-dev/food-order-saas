@@ -54,12 +54,14 @@ const foodCategory: MenuCategory = {
   id: "cat-burgers",
   name: "Burgers",
   menu_items: [burger, fries],
+  subcategories: [],
 };
 
 const drinkCategory: MenuCategory = {
   id: "cat-drinks",
   name: "Drinks",
   menu_items: [cola],
+  subcategories: [],
 };
 
 const categories: MenuCategory[] = [foodCategory, drinkCategory];

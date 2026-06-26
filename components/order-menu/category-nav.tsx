@@ -6,26 +6,36 @@ import type { RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "./locale-context";
 
-import type { MenuCategory } from "./types";
+import type { MenuCategory, MenuSubcategory } from "./types";
 
 type CategoryNavProps = {
   categoryButtonRefs: RefObject<Record<string, HTMLButtonElement | null>>;
   categories: MenuCategory[];
+  navRef: RefObject<HTMLElement | null>;
   onOpenSearch: () => void;
   onSelectCategory: (categoryId: string) => void;
+  onSelectSubcategory: (subcategoryId: string) => void;
   visibleActiveCategoryId: string;
+  visibleActiveSubcategoryId: string;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  subcategories: MenuSubcategory[];
+  subcategoryButtonRefs: RefObject<Record<string, HTMLButtonElement | null>>;
 };
 
 export function CategoryNav({
   categoryButtonRefs,
   categories,
+  navRef,
   onOpenSearch,
   onSelectCategory,
+  onSelectSubcategory,
   visibleActiveCategoryId,
+  visibleActiveSubcategoryId,
   searchQuery,
   setSearchQuery,
+  subcategories,
+  subcategoryButtonRefs,
 }: CategoryNavProps) {
   const t = useTranslations();
 
@@ -33,6 +43,7 @@ export function CategoryNav({
     <nav
       aria-label={t("general.menu_categories")}
       className="sticky top-0 z-20 -mx-4 mb-6 overflow-hidden border-b border-border bg-white py-3 sm:-mx-6 lg:-mx-8"
+      ref={navRef}
     >
       <div className="flex items-center gap-2 px-4 sm:px-6 lg:px-8">
         <div className="flex shrink-0 items-center gap-1 sm:hidden">
@@ -91,6 +102,28 @@ export function CategoryNav({
           </div>
         </div>
       </div>
+      {subcategories.length > 0 ? (
+        <div className="mt-3 border-t border-border px-4 pt-3 sm:px-6 lg:px-8">
+          <div className="no-scrollbar overflow-x-auto">
+            <div className="flex w-max items-center gap-2">
+              {subcategories.map((subcategory) => (
+                <Button
+                  className="px-5 font-semibold"
+                  key={subcategory.id}
+                  onClick={() => onSelectSubcategory(subcategory.id)}
+                  ref={(element) => {
+                    subcategoryButtonRefs.current[subcategory.id] = element;
+                  }}
+                  type="button"
+                  variant={subcategory.id === visibleActiveSubcategoryId ? "default" : "ghost"}
+                >
+                  {subcategory.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </nav>
   );
 }

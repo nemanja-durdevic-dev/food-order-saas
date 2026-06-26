@@ -47,6 +47,9 @@ export function OrderMenu({
 }: OrderMenuProps) {
   const categoryRefs = useRef<Record<string, HTMLElement | null>>({});
   const categoryButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const categoryNavRef = useRef<HTMLElement | null>(null);
+  const subcategoryRefs = useRef<Record<string, HTMLElement | null>>({});
+  const subcategoryButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const programmaticScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const authCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const infoCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -145,6 +148,7 @@ export function OrderMenu({
   const trimmedSearchQuery = searchQuery.trim().toLowerCase();
 
   const [activeCategoryId, setActiveCategoryId] = useState(categories[0]?.id ?? "");
+  const [activeSubcategoryId, setActiveSubcategoryId] = useState("");
 
   const shouldShowOrderContent = hasHydratedLocation && selectedLocation;
   const isCartButtonVisible = Boolean(shouldShowOrderContent) && cartQuantity > 0;
@@ -154,6 +158,14 @@ export function OrderMenu({
   )
     ? activeCategoryId
     : (selectedCategories[0]?.id ?? "");
+  const activeSubcategories =
+    selectedCategories.find((category) => category.id === visibleActiveCategoryId)?.subcategories ??
+    [];
+  const visibleActiveSubcategoryId = activeSubcategories.some(
+    (subcategory) => subcategory.id === activeSubcategoryId,
+  )
+    ? activeSubcategoryId
+    : (activeSubcategories[0]?.id ?? "");
 
   const hasAutoOpenedLocationRef = useRef(false);
 
@@ -191,6 +203,16 @@ export function OrderMenu({
             .toLowerCase()
             .includes(trimmedSearchQuery),
         ),
+        subcategories: category.subcategories
+          .map((subcategory) => ({
+            ...subcategory,
+            menu_items: subcategory.menu_items.filter((item) =>
+              `${item.name} ${item.description ?? ""} ${category.name} ${subcategory.name}`
+                .toLowerCase()
+                .includes(trimmedSearchQuery),
+            ),
+          }))
+          .filter((subcategory) => subcategory.menu_items.length > 0),
       }))
       .filter((category) => category.menu_items.length > 0);
   }, [selectedCategories, trimmedSearchQuery]);
@@ -216,9 +238,14 @@ export function OrderMenu({
           )[0];
 
         const categoryId = visibleEntry?.target.getAttribute("data-category-id");
+        const subcategoryId = visibleEntry?.target.getAttribute("data-subcategory-id");
 
         if (categoryId) {
           setActiveCategoryId(categoryId);
+        }
+
+        if (subcategoryId) {
+          setActiveSubcategoryId(subcategoryId);
         }
       },
       {
@@ -228,10 +255,18 @@ export function OrderMenu({
     );
 
     for (const category of filteredCategories) {
-      const element = categoryRefs.current[category.id];
+      const element = category.subcategories.length > 0 ? null : categoryRefs.current[category.id];
 
       if (element) {
         observer.observe(element);
+      }
+
+      for (const subcategory of category.subcategories) {
+        const subcategoryElement = subcategoryRefs.current[subcategory.id];
+
+        if (subcategoryElement) {
+          observer.observe(subcategoryElement);
+        }
       }
     }
 
@@ -256,6 +291,19 @@ export function OrderMenu({
       inline: "center",
     });
   }, [visibleActiveCategoryId]);
+
+  // Auto-scroll subcategory nav buttons
+  useEffect(() => {
+    if (!visibleActiveSubcategoryId) {
+      return;
+    }
+
+    subcategoryButtonRefs.current[visibleActiveSubcategoryId]?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [visibleActiveSubcategoryId]);
 
   // Auto-open cart when returning from repeat-order redirect
   useEffect(() => {
@@ -358,9 +406,47 @@ export function OrderMenu({
     }, 800);
 
     setActiveCategoryId(categoryId);
-    categoryRefs.current[categoryId]?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
+    setActiveSubcategoryId("");
+    scrollToMenuSection(categoryRefs.current[categoryId]);
+  }
+
+  function scrollToSubcategory(subcategoryId: string) {
+    if (programmaticScrollTimeoutRef.current) {
+      clearTimeout(programmaticScrollTimeoutRef.current);
+    }
+
+    const categoryId = selectedCategories.find((category) =>
+      category.subcategories.some((subcategory) => subcategory.id === subcategoryId),
+    )?.id;
+
+    programmaticScrollTimeoutRef.current = setTimeout(() => {
+      programmaticScrollTimeoutRef.current = null;
+      if (categoryId) {
+        setActiveCategoryId(categoryId);
+      }
+      setActiveSubcategoryId(subcategoryId);
+    }, 800);
+
+    if (categoryId) {
+      setActiveCategoryId(categoryId);
+    }
+    setActiveSubcategoryId(subcategoryId);
+    scrollToMenuSection(subcategoryRefs.current[subcategoryId]);
+  }
+
+  function scrollToMenuSection(element: HTMLElement | null | undefined) {
+    if (!element) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      const navHeight = categoryNavRef.current?.getBoundingClientRect().height ?? 0;
+      const targetTop = element.getBoundingClientRect().top + window.scrollY - navHeight - 24;
+
+      window.scrollTo({
+        behavior: "smooth",
+        top: Math.max(targetTop, 0),
+      });
     });
   }
 
@@ -749,11 +835,16 @@ export function OrderMenu({
             <CategoryNav
               categoryButtonRefs={categoryButtonRefs}
               categories={selectedCategories}
+              navRef={categoryNavRef}
               onOpenSearch={() => setIsSearchOpen(true)}
               onSelectCategory={scrollToCategory}
+              onSelectSubcategory={scrollToSubcategory}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
+              subcategories={activeSubcategories}
+              subcategoryButtonRefs={subcategoryButtonRefs}
               visibleActiveCategoryId={visibleActiveCategoryId}
+              visibleActiveSubcategoryId={visibleActiveSubcategoryId}
             />
           ) : null}
 
@@ -865,6 +956,7 @@ export function OrderMenu({
               onOpenAllergens={openAllergens}
               onOpenItemDetails={openItemDetails}
               selectedAllergenIds={selectedAllergenIds}
+              subcategoryRefs={subcategoryRefs}
             />
           ) : null}
           {shouldShowOrderContent ? (

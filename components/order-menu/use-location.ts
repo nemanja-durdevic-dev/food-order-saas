@@ -19,6 +19,14 @@ function getCategoriesForLocation(
       menu_items: category.menu_items.filter((item) =>
         item.availableLocationIds.includes(location.id),
       ),
+      subcategories: category.subcategories
+        .map((subcategory) => ({
+          ...subcategory,
+          menu_items: subcategory.menu_items.filter((item) =>
+            item.availableLocationIds.includes(location.id),
+          ),
+        }))
+        .filter((subcategory) => subcategory.menu_items.length > 0),
     }))
     .filter((category) => category.menu_items.length > 0);
 }
