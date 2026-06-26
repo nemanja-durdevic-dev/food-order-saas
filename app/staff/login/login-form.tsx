@@ -28,10 +28,31 @@ export default function LoginForm() {
       return;
     }
 
-    const role = data.user?.app_metadata?.role;
-    if (role === "admin") router.push("/admin");
-    else if (role === "staff") router.push("/staff/orders");
-    else {
+    const { data: membership } = await supabase
+      .from("restaurant_members")
+      .select("id")
+      .eq("user_id", data.user.id)
+      .in("role", ["admin", "owner"])
+      .limit(1)
+      .maybeSingle();
+
+    if (membership) {
+      router.push("/admin");
+      setLoading(false);
+      return;
+    }
+
+    const { data: staff } = await supabase
+      .from("staff")
+      .select("id")
+      .eq("user_id", data.user.id)
+      .eq("role", "staff")
+      .limit(1)
+      .maybeSingle();
+
+    if (staff) {
+      router.push("/staff/orders");
+    } else {
       await supabase.auth.signOut();
       setError("No staff or admin access");
     }

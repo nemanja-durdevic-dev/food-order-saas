@@ -74,10 +74,17 @@ export type HoursOverride = {
   close_time: string | null;
 };
 
+export type RestaurantSocialLinks = {
+  facebook_url: string | null;
+  instagram_url: string | null;
+  tiktok_url: string | null;
+};
+
 export type OrderMenuProps = {
   allAllergens: ItemAllergen[];
   categories: MenuCategory[];
   error?: string;
   locations: Location[];
   overridesByLocationId?: Map<string, HoursOverride[]>;
+  socialLinks: RestaurantSocialLinks;
 };

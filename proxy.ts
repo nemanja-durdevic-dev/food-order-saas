@@ -29,10 +29,32 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const url = request.nextUrl.pathname;
-  const role = user?.app_metadata?.role;
+  if (url.startsWith("/admin") && user) {
+    const { data: membership } = await supabase
+      .from("restaurant_members")
+      .select("id")
+      .eq("user_id", user.id)
+      .in("role", ["admin", "owner"])
+      .limit(1)
+      .maybeSingle();
+
+    if (!membership) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
+
+  const { data: staff } = user
+    ? await supabase
+        .from("staff")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("role", "staff")
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
 
   // Staff only on /staff routes
-  if (role === "staff") {
+  if (staff) {
     if (url.startsWith("/staff")) {
       if (url === "/staff/login") {
         return NextResponse.redirect(new URL("/staff/orders", request.url));
@@ -43,7 +65,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Not staff — protect staff routes from unauthenticated access.
-  // /admin handles owner authentication and membership checks on the page.
+  // /admin handles authentication and restaurant_members checks on the page.
   if (url.startsWith("/staff") && url !== "/staff/login") {
     return NextResponse.redirect(new URL("/staff/login", request.url));
   }
@@ -52,5 +74,13 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/staff", "/staff/:path*", "/admin/:path*", "/order", "/order/:path*", "/orders"],
+  matcher: [
+    "/staff",
+    "/staff/:path*",
+    "/admin",
+    "/admin/:path*",
+    "/order",
+    "/order/:path*",
+    "/orders",
+  ],
 };

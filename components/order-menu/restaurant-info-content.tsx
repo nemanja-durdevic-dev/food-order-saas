@@ -1,11 +1,13 @@
 "use client";
 
+import type { ReactElement } from "react";
+
 import { Logo } from "@/components/logo";
 import { BRAND_NAME } from "@/lib/brand";
 import { useTranslations } from "./locale-context";
 
 import { contactEmail } from "./constants";
-import type { OpeningHour } from "./types";
+import type { OpeningHour, RestaurantSocialLinks } from "./types";
 import { getScheduleForDisplay } from "./opening-hours";
 
 type RestaurantInfoContentProps = {
@@ -15,6 +17,7 @@ type RestaurantInfoContentProps = {
   isOpenNow?: boolean;
   openingHours: OpeningHour[] | null;
   phone: string | null;
+  socialLinks: RestaurantSocialLinks;
   title?: string | null;
   titleId?: string;
 };
@@ -26,6 +29,7 @@ export function RestaurantInfoContent({
   isOpenNow = true,
   openingHours,
   phone,
+  socialLinks,
   titleId,
   title = BRAND_NAME,
 }: RestaurantInfoContentProps) {
@@ -43,7 +47,7 @@ export function RestaurantInfoContent({
         <OpeningHours days={days} isManuallyClosed={isManuallyClosed} isOpenNow={isOpenNow} />
       ) : null}
       <Address address={address} />
-      <ContactInformation phone={phone} />
+      <ContactInformation phone={phone} socialLinks={socialLinks} />
     </>
   );
 
@@ -118,7 +122,13 @@ function Address({ address }: { address: string | null }) {
   );
 }
 
-function ContactInformation({ phone }: { phone: string | null }) {
+function ContactInformation({
+  phone,
+  socialLinks,
+}: {
+  phone: string | null;
+  socialLinks: RestaurantSocialLinks;
+}) {
   const t = useTranslations();
 
   return (
@@ -128,43 +138,57 @@ function ContactInformation({ phone }: { phone: string | null }) {
         <p>{contactEmail}</p>
         {phone ? <p>{phone}</p> : null}
       </div>
-      <SocialLinks />
+      <SocialLinks socialLinks={socialLinks} />
     </section>
   );
 }
 
-function SocialLinks() {
+function SocialLinks({ socialLinks }: { socialLinks: RestaurantSocialLinks }) {
   const t = useTranslations();
+  const links: Array<{ href: string; label: string; icon: ReactElement }> = [];
+
+  if (socialLinks.instagram_url) {
+    links.push({
+      href: socialLinks.instagram_url,
+      label: t("restaurant.social_instagram"),
+      icon: <InstagramIcon />,
+    });
+  }
+
+  if (socialLinks.facebook_url) {
+    links.push({
+      href: socialLinks.facebook_url,
+      label: t("restaurant.social_facebook"),
+      icon: <FacebookIcon />,
+    });
+  }
+
+  if (socialLinks.tiktok_url) {
+    links.push({
+      href: socialLinks.tiktok_url,
+      label: t("restaurant.social_tiktok"),
+      icon: <TikTokIcon />,
+    });
+  }
+
+  if (links.length === 0) {
+    return null;
+  }
 
   return (
     <div className="mt-5 flex items-center gap-3">
-      <a
-        aria-label={t("restaurant.social_instagram")}
-        className="grid size-10 place-items-center rounded-full bg-white text-black shadow-sm transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        href="https://www.instagram.com"
-        rel="noreferrer"
-        target="_blank"
-      >
-        <InstagramIcon />
-      </a>
-      <a
-        aria-label={t("restaurant.social_facebook")}
-        className="grid size-10 place-items-center rounded-full bg-white text-black shadow-sm transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        href="https://www.facebook.com"
-        rel="noreferrer"
-        target="_blank"
-      >
-        <FacebookIcon />
-      </a>
-      <a
-        aria-label={t("restaurant.social_tiktok")}
-        className="grid size-10 place-items-center rounded-full bg-white text-black shadow-sm transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        href="https://www.tiktok.com"
-        rel="noreferrer"
-        target="_blank"
-      >
-        <TikTokIcon />
-      </a>
+      {links.map((link) => (
+        <a
+          aria-label={link.label}
+          className="grid size-10 place-items-center rounded-full bg-white text-black shadow-sm transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          href={link.href}
+          key={link.label}
+          rel="noreferrer"
+          target="_blank"
+        >
+          {link.icon}
+        </a>
+      ))}
     </div>
   );
 }

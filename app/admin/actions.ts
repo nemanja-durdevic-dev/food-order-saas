@@ -31,7 +31,7 @@ export async function updateStripeSettings(formData: FormData) {
     .select("id")
     .eq("restaurant_id", restaurantId)
     .eq("user_id", user.id)
-    .eq("role", "owner")
+    .in("role", ["admin", "owner"])
     .maybeSingle();
 
   if (!membership) {
@@ -73,7 +73,7 @@ export async function toggleLocationStatus(formData: FormData) {
     .select("id")
     .eq("restaurant_id", restaurantId)
     .eq("user_id", user.id)
-    .eq("role", "owner")
+    .in("role", ["admin", "owner"])
     .maybeSingle();
 
   if (!membership) {

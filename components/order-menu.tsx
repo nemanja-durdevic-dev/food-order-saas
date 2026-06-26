@@ -33,6 +33,7 @@ import type {
   MenuItem,
   OpeningHour,
   OrderMenuProps,
+  RestaurantSocialLinks,
 } from "@/components/order-menu/types";
 import { formatPrice } from "@/components/order-menu/utils";
 
@@ -44,6 +45,7 @@ export function OrderMenu({
   error,
   locations,
   overridesByLocationId,
+  socialLinks,
 }: OrderMenuProps) {
   const categoryRefs = useRef<Record<string, HTMLElement | null>>({});
   const categoryButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -753,6 +755,7 @@ export function OrderMenu({
               isOpenNow={isOpenNow ?? true}
               openingHours={selectedLocation?.opening_hours ?? null}
               phone={selectedLocation?.phone ?? null}
+              socialLinks={socialLinks}
               title={selectedLocation?.name ?? null}
             />
           ) : null}
@@ -976,6 +979,7 @@ export function OrderMenu({
                 isOpenNow={isOpenNow ?? true}
                 openingHours={selectedLocation.opening_hours}
                 phone={selectedLocation.phone}
+                socialLinks={socialLinks}
                 title={selectedLocation.name}
               />
             </footer>
@@ -1350,6 +1354,7 @@ function RestaurantInfoDialog({
   onClose,
   openingHours,
   phone,
+  socialLinks,
   title,
 }: {
   address: string | null;
@@ -1359,6 +1364,7 @@ function RestaurantInfoDialog({
   onClose: () => void;
   openingHours: OpeningHour[] | null;
   phone: string | null;
+  socialLinks: RestaurantSocialLinks;
   title: string | null;
 }) {
   const t = useTranslations();
@@ -1394,6 +1400,7 @@ function RestaurantInfoDialog({
             isOpenNow={isOpenNow}
             openingHours={openingHours}
             phone={phone}
+            socialLinks={socialLinks}
             title={title}
             titleId="restaurant-info-title"
           />

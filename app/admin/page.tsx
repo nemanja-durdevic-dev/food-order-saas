@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase-server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { AdminLoginForm } from "./admin-login-form";
 import { signOut, toggleLocationStatus, updateStripeSettings } from "./actions";
@@ -24,35 +26,16 @@ export default async function AdminPage({ searchParams }: Props) {
     return <AdminLoginForm />;
   }
 
-  const { data: membership, error: membershipError } = await supabase
+  const { data: membership } = await supabase
     .from("restaurant_members")
     .select("restaurant_id, role")
     .eq("user_id", user.id)
-    .eq("role", "owner")
+    .in("role", ["admin", "owner"])
     .limit(1)
     .maybeSingle();
 
   if (!membership) {
-    return (
-      <main className="mx-auto max-w-xl px-6 py-12">
-        <section className="space-y-4">
-          <h1 className="text-2xl font-semibold">No restaurant access</h1>
-          <p className="text-sm text-muted-foreground">Add this user to restaurant_members.</p>
-          <div className="space-y-1 border-l border-border pl-4 text-xs text-muted-foreground">
-            <p>Signed-in email: {user.email ?? "No email"}</p>
-            <p className="break-all">Signed-in user ID: {user.id}</p>
-            {membershipError ? (
-              <p className="mt-2 text-destructive">Lookup error: {membershipError.message}</p>
-            ) : null}
-          </div>
-          <form action={signOut}>
-            <button className="border border-border px-4 py-2 text-sm font-medium" type="submit">
-              Sign out
-            </button>
-          </form>
-        </section>
-      </main>
-    );
+    redirect("/");
   }
 
   const [{ data: restaurant, error: restaurantError }, { data: locations }] = await Promise.all([
@@ -95,11 +78,19 @@ export default async function AdminPage({ searchParams }: Props) {
             <h1 className="mt-1 text-3xl font-semibold tracking-tight">{restaurant.name}</h1>
             <p className="mt-2 text-sm text-muted-foreground">/{restaurant.slug}/order</p>
           </div>
-          <form action={signOut}>
-            <button className="border border-border px-4 py-2 text-sm font-medium" type="submit">
-              Sign out
-            </button>
-          </form>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              className="border border-border px-4 py-2 text-sm font-medium"
+              href="/admin/configuration"
+            >
+              Configuration status
+            </Link>
+            <form action={signOut}>
+              <button className="border border-border px-4 py-2 text-sm font-medium" type="submit">
+                Sign out
+              </button>
+            </form>
+          </div>
         </header>
 
         {updated ? (
