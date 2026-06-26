@@ -227,7 +227,9 @@ export function CartPanel({
       }
 
       if (paymentMethod === "vipps") {
-        window.open(data.url, "_blank") || (window.location.href = data.url);
+        if (!window.open(data.url, "_blank")) {
+          window.location.href = data.url;
+        }
         window.location.href = "/order/confirmation";
       } else {
         window.location.href = data.url;
@@ -672,7 +674,7 @@ export function CartPanel({
                   return (
                     <button
                       key={dateValue}
-                      className={`flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${
+                      className={`flex h-20 w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-xl text-sm font-semibold transition-colors ${
                         isSelected
                           ? "bg-foreground text-background"
                           : "bg-secondary text-foreground hover:bg-secondary/80"
@@ -693,7 +695,7 @@ export function CartPanel({
                 {t("cart.time")}
               </label>
               <input
-                className="h-12 w-full min-w-0 rounded-md border border-border bg-white px-3 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="box-border block h-12 w-full max-w-full min-w-0 appearance-none rounded-md border border-border bg-white px-3 text-sm font-medium leading-[3rem] outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-calendar-picker-indicator]:m-0 [&::-webkit-calendar-picker-indicator]:p-0"
                 id={preorderTimeId}
                 max={selectedDayHours?.close ?? ""}
                 min={selectedDayHours?.open ?? ""}
@@ -702,17 +704,9 @@ export function CartPanel({
                 value={preorderTime}
               />
             </div>
-            <div className="mt-auto grid grid-cols-2 gap-3 pt-6">
+            <div className="mt-auto pt-6">
               <Button
-                className="h-12 rounded-md"
-                onClick={closePreorderDialog}
-                type="button"
-                variant="outline"
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                className="h-12 rounded-md"
+                className="h-12 w-full rounded-md"
                 disabled={!preorderDate || !preorderTime}
                 onClick={closePreorderDialog}
                 type="button"
