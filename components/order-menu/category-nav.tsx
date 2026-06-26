@@ -21,6 +21,7 @@ type CategoryNavProps = {
   setSearchQuery: (query: string) => void;
   subcategories: MenuSubcategory[];
   subcategoryButtonRefs: RefObject<Record<string, HTMLButtonElement | null>>;
+  subcategoryNavRef: RefObject<HTMLDivElement | null>;
 };
 
 export function CategoryNav({
@@ -36,13 +37,14 @@ export function CategoryNav({
   setSearchQuery,
   subcategories,
   subcategoryButtonRefs,
+  subcategoryNavRef,
 }: CategoryNavProps) {
   const t = useTranslations();
 
   return (
     <nav
       aria-label={t("general.menu_categories")}
-      className="sticky top-0 z-20 -mx-4 mb-6 overflow-hidden border-b border-border bg-white py-3 sm:-mx-6 lg:-mx-8"
+      className="sticky top-0 z-20 -mx-4 mb-6 overflow-visible border-b border-border bg-white py-3 sm:-mx-6 lg:-mx-8"
       ref={navRef}
     >
       <div className="flex items-center gap-2 px-4 sm:px-6 lg:px-8">
@@ -103,7 +105,10 @@ export function CategoryNav({
         </div>
       </div>
       {subcategories.length > 0 ? (
-        <div className="mt-3 border-t border-border px-4 pt-3 sm:px-6 lg:px-8">
+        <div
+          className="absolute left-0 right-0 top-full border-b border-border bg-white px-4 py-3 shadow-sm sm:px-6 lg:px-8"
+          ref={subcategoryNavRef}
+        >
           <div className="no-scrollbar overflow-x-auto">
             <div className="flex w-max items-center gap-2">
               {subcategories.map((subcategory) => (

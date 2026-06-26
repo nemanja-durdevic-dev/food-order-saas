@@ -50,6 +50,7 @@ export function OrderMenu({
   const categoryNavRef = useRef<HTMLElement | null>(null);
   const subcategoryRefs = useRef<Record<string, HTMLElement | null>>({});
   const subcategoryButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const subcategoryNavRef = useRef<HTMLDivElement | null>(null);
   const programmaticScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const authCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const infoCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -441,7 +442,13 @@ export function OrderMenu({
 
     requestAnimationFrame(() => {
       const navHeight = categoryNavRef.current?.getBoundingClientRect().height ?? 0;
-      const targetTop = element.getBoundingClientRect().top + window.scrollY - navHeight - 24;
+      const subcategoryNavHeight = subcategoryNavRef.current?.getBoundingClientRect().height ?? 0;
+      const targetTop =
+        element.getBoundingClientRect().top +
+        window.scrollY -
+        navHeight -
+        subcategoryNavHeight -
+        24;
 
       window.scrollTo({
         behavior: "smooth",
@@ -843,6 +850,7 @@ export function OrderMenu({
               setSearchQuery={setSearchQuery}
               subcategories={activeSubcategories}
               subcategoryButtonRefs={subcategoryButtonRefs}
+              subcategoryNavRef={subcategoryNavRef}
               visibleActiveCategoryId={visibleActiveCategoryId}
               visibleActiveSubcategoryId={visibleActiveSubcategoryId}
             />
