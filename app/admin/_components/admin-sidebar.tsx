@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LayoutDashboard, LogOut, Menu, X } from "lucide-react";
+import { Home, LogOut, Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -53,20 +53,22 @@ export function AdminSidebar({ activeSlug, restaurantName }: AdminSidebarProps) 
   function renderSidebarContent(isCollapsed: boolean, onNavigate?: () => void) {
     return (
       <>
-        <div
-          className={`mb-6 flex min-h-12 items-start ${isCollapsed ? "justify-center" : "justify-between"}`}
-        >
-          {isCollapsed ? (
-            <div className="grid size-10 place-items-center rounded-md bg-foreground text-sm font-semibold text-background">
-              A
-            </div>
-          ) : (
-            <div className="min-w-0">
-              <h1 className="truncate text-xl font-semibold tracking-tight">
-                {restaurantName ?? "Control Panel"}
-              </h1>
-            </div>
-          )}
+        <div className="mb-6 flex min-h-12 items-start justify-between">
+          <Link
+            className={`flex items-center gap-3 rounded-md py-2 text-sm font-medium transition-colors ${
+              isCollapsed ? "justify-center px-2" : "px-2"
+            } ${
+              overviewActive
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+            href="/admin"
+            onClick={onNavigate}
+            title={isCollapsed ? "Overview" : undefined}
+          >
+            <Home className="size-5 shrink-0" />
+            {!isCollapsed ? <span>Overview</span> : null}
+          </Link>
           {!isCollapsed ? (
             <button
               className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
@@ -80,24 +82,15 @@ export function AdminSidebar({ activeSlug, restaurantName }: AdminSidebarProps) 
         </div>
 
         <nav className="flex flex-col gap-1 text-sm">
-          <Link
-            className={`flex items-center gap-3 rounded-md px-3 py-2 font-medium transition-colors ${isCollapsed ? "justify-center" : ""} ${
-              overviewActive
-                ? "bg-foreground text-background"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-            href="/admin"
-            onClick={onNavigate}
-            title={isCollapsed ? "Overview" : undefined}
-          >
-            <LayoutDashboard className="size-5 shrink-0" />
-            {!isCollapsed ? <span>Overview</span> : null}
-          </Link>
-
           {groupedResources.map((group) => (
             <div className="mt-4 flex flex-col gap-1 first:mt-0" key={group.name || "ungrouped"}>
-              {group.name && !isCollapsed ? (
-                <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {group.name ? (
+                <p
+                  aria-hidden={isCollapsed}
+                  className={`mb-1 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground ${
+                    isCollapsed ? "invisible" : ""
+                  }`}
+                >
                   {group.name}
                 </p>
               ) : null}
@@ -108,7 +101,9 @@ export function AdminSidebar({ activeSlug, restaurantName }: AdminSidebarProps) 
 
                 return (
                   <Link
-                    className={`flex items-center gap-3 rounded-md px-3 py-2 font-medium transition-colors ${isCollapsed ? "justify-center" : ""} ${
+                    className={`flex items-center gap-3 rounded-md py-2 font-medium transition-colors ${
+                      isCollapsed ? "justify-center px-2" : "px-3"
+                    } ${
                       isActive
                         ? "bg-foreground text-background"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -128,8 +123,8 @@ export function AdminSidebar({ activeSlug, restaurantName }: AdminSidebarProps) 
         </nav>
 
         <button
-          className={`mt-auto flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-destructive ${
-            isCollapsed ? "justify-center" : ""
+          className={`mt-auto flex items-center gap-3 rounded-md py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-destructive ${
+            isCollapsed ? "justify-center px-2" : "px-3"
           }`}
           onClick={handleSignOut}
           title={isCollapsed ? "Sign out" : undefined}
@@ -180,7 +175,7 @@ export function AdminSidebar({ activeSlug, restaurantName }: AdminSidebarProps) 
           }
         }}
         className={`fixed inset-y-0 left-0 z-30 hidden h-screen flex-col border-r border-border bg-card px-3 py-5 shadow-sm transition-[width] duration-200 lg:flex ${
-          collapsed ? "w-20" : "w-64"
+          collapsed ? "w-16" : "w-64"
         }`}
         onFocus={() => setExpanded(true)}
         onMouseEnter={() => setExpanded(true)}

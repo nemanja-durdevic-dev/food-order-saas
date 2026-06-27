@@ -10,7 +10,7 @@ export function AdminShell({ activeSlug, children, restaurantName }: AdminShellP
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AdminSidebar activeSlug={activeSlug} restaurantName={restaurantName} />
-      <main className="min-w-0 px-4 pb-6 pt-20 sm:px-6 lg:ml-20 lg:px-8 lg:py-8">{children}</main>
+      <main className="min-w-0 px-4 pb-6 pt-20 sm:px-6 lg:ml-16 lg:px-8 lg:py-8">{children}</main>
     </div>
   );
 }
