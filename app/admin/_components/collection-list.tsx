@@ -88,13 +88,22 @@ export function CollectionList({
           <h2 className="mt-1 text-3xl font-semibold tracking-tight">{resource.pluralLabel}</h2>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{resource.description}</p>
         </div>
-        <button
-          className="h-10 rounded-md bg-foreground px-4 text-sm font-medium text-background opacity-50"
-          disabled
-          type="button"
-        >
-          Create {resource.label}
-        </button>
+        {resource.createFields?.length ? (
+          <Link
+            className="inline-flex h-10 items-center justify-center rounded-md bg-foreground px-4 text-sm font-medium text-background"
+            href={`/admin/${resource.slug}/create`}
+          >
+            Create {resource.label}
+          </Link>
+        ) : (
+          <button
+            className="h-10 rounded-md bg-foreground px-4 text-sm font-medium text-background opacity-50"
+            disabled
+            type="button"
+          >
+            Create {resource.label}
+          </button>
+        )}
       </div>
 
       <form className="mb-4 flex max-w-md gap-2">
@@ -123,6 +132,7 @@ export function CollectionList({
                     {column.label}
                   </th>
                 ))}
+                <th className="px-4 py-3 text-right font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -136,13 +146,21 @@ export function CollectionList({
                       {formatValue(record, column)}
                     </td>
                   ))}
+                  <td className="px-4 py-3 text-right align-middle">
+                    <Link
+                      className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
+                      href={`/admin/${resource.slug}/edit?id=${encodeURIComponent(String(record.id))}`}
+                    >
+                      Edit
+                    </Link>
+                  </td>
                 </tr>
               ))}
               {records.length === 0 ? (
                 <tr>
                   <td
                     className="px-4 py-10 text-center text-sm text-muted-foreground"
-                    colSpan={resource.columns.length}
+                    colSpan={resource.columns.length + 1}
                   >
                     No {resource.pluralLabel.toLowerCase()} found.
                   </td>

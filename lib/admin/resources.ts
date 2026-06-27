@@ -7,6 +7,24 @@ export type AdminColumn = {
   type?: "boolean" | "currency" | "datetime" | "status" | "text";
 };
 
+export type AdminFieldOption = {
+  label: string;
+  value: string;
+};
+
+export type AdminField = {
+  key: string;
+  label: string;
+  type: "boolean" | "number" | "select" | "text" | "textarea";
+  helpText?: string;
+  options?: AdminFieldOption[];
+  relation?: {
+    labelColumn: string;
+    table: string;
+  };
+  required?: boolean;
+};
+
 export type AdminResource = {
   slug: string;
   label: string;
@@ -19,7 +37,49 @@ export type AdminResource = {
   searchColumns?: string[];
   restaurantScoped?: boolean;
   sort?: { column: string; ascending: boolean };
+  createFields?: AdminField[];
+  editFields?: AdminField[];
+  formSelect?: string;
 };
+
+const localizedNameFields: AdminField[] = [
+  { key: "name", label: "Name", type: "text", required: true },
+  { key: "name_no", label: "Norwegian name", type: "text" },
+  { key: "name_sv", label: "Swedish name", type: "text" },
+  { key: "name_da", label: "Danish name", type: "text" },
+  { key: "sort_order", label: "Sort order", type: "number", required: true },
+];
+
+const categoryRelationField: AdminField = {
+  key: "category_id",
+  label: "Category",
+  relation: { table: "categories", labelColumn: "name" },
+  required: true,
+  type: "select",
+};
+
+const subcategoryRelationField: AdminField = {
+  key: "subcategory_id",
+  label: "Subcategory",
+  relation: { table: "subcategories", labelColumn: "name" },
+  type: "select",
+};
+
+const menuItemFields: AdminField[] = [
+  { key: "name", label: "Name", type: "text", required: true },
+  { key: "name_no", label: "Norwegian name", type: "text" },
+  { key: "name_sv", label: "Swedish name", type: "text" },
+  { key: "name_da", label: "Danish name", type: "text" },
+  { key: "description", label: "Description", type: "textarea" },
+  { key: "description_no", label: "Norwegian description", type: "textarea" },
+  { key: "description_sv", label: "Swedish description", type: "textarea" },
+  { key: "description_da", label: "Danish description", type: "textarea" },
+  { key: "image_url", label: "Image URL", type: "text" },
+  { key: "price", label: "Price", type: "number", required: true },
+  categoryRelationField,
+  subcategoryRelationField,
+  { key: "is_available", label: "Available", type: "boolean" },
+];
 
 export const adminResources: AdminResource[] = [
   {
@@ -39,6 +99,9 @@ export const adminResources: AdminResource[] = [
     searchColumns: ["name", "name_no", "name_sv", "name_da"],
     restaurantScoped: true,
     sort: { column: "sort_order", ascending: true },
+    createFields: localizedNameFields,
+    editFields: localizedNameFields,
+    formSelect: "id, name, name_no, name_sv, name_da, sort_order",
   },
   {
     slug: "subcategories",
@@ -58,6 +121,9 @@ export const adminResources: AdminResource[] = [
     searchColumns: ["name", "name_no", "name_sv", "name_da"],
     restaurantScoped: true,
     sort: { column: "sort_order", ascending: true },
+    createFields: [categoryRelationField, ...localizedNameFields],
+    editFields: [categoryRelationField, ...localizedNameFields],
+    formSelect: "id, category_id, name, name_no, name_sv, name_da, sort_order",
   },
   {
     slug: "menu-items",
@@ -76,6 +142,10 @@ export const adminResources: AdminResource[] = [
     searchColumns: ["name", "name_no", "description", "description_no"],
     restaurantScoped: true,
     sort: { column: "name", ascending: true },
+    createFields: menuItemFields,
+    editFields: menuItemFields,
+    formSelect:
+      "id, category_id, subcategory_id, is_available, name, name_no, name_sv, name_da, description, description_no, description_sv, description_da, image_url, price",
   },
   {
     slug: "orders",
@@ -95,6 +165,35 @@ export const adminResources: AdminResource[] = [
     searchColumns: ["order_code"],
     restaurantScoped: true,
     sort: { column: "created_at", ascending: false },
+    editFields: [
+      {
+        key: "status",
+        label: "Status",
+        options: [
+          { label: "Pending", value: "pending" },
+          { label: "Confirmed", value: "confirmed" },
+          { label: "Preparing", value: "preparing" },
+          { label: "Ready for pickup", value: "ready_for_pickup" },
+          { label: "Completed", value: "completed" },
+          { label: "Cancelled", value: "cancelled" },
+        ],
+        required: true,
+        type: "select",
+      },
+      {
+        key: "payment_status",
+        label: "Payment status",
+        options: [
+          { label: "Unpaid", value: "unpaid" },
+          { label: "Paid", value: "paid" },
+          { label: "Failed", value: "failed" },
+          { label: "Refunded", value: "refunded" },
+        ],
+        required: true,
+        type: "select",
+      },
+    ],
+    formSelect: "id, status, payment_status, order_code",
   },
 ];
 
