@@ -13,8 +13,18 @@ type CollectionListProps = {
   resource: AdminResource;
 };
 
+function getValue(record: AdminRecord, key: string) {
+  return key.split(".").reduce<unknown>((value, part) => {
+    if (!value || typeof value !== "object") {
+      return undefined;
+    }
+
+    return (value as Record<string, unknown>)[part];
+  }, record);
+}
+
 function formatValue(record: AdminRecord, column: AdminColumn) {
-  const value = record[column.key];
+  const value = getValue(record, column.key);
 
   if (value === null || value === undefined || value === "") {
     return <span className="text-muted-foreground">-</span>;

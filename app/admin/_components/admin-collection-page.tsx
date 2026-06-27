@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import type { AdminResource } from "@/lib/admin/resources";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { createClient } from "@/lib/supabase-server";
-import { AdminLoginForm } from "../admin-login-form";
 import { AdminShell } from "./admin-shell";
 import { CollectionList } from "./collection-list";
 
@@ -31,7 +30,7 @@ export async function AdminCollectionPage({ resource, searchParams }: AdminColle
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return <AdminLoginForm />;
+    redirect("/admin/login");
   }
 
   const { data: membership } = await supabase

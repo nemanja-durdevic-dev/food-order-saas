@@ -29,6 +29,10 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const url = request.nextUrl.pathname;
+  if (url.startsWith("/admin") && !user && url !== "/admin/login") {
+    return NextResponse.redirect(new URL("/admin/login", request.url));
+  }
+
   if (url.startsWith("/admin") && user) {
     const { data: membership } = await supabase
       .from("restaurant_members")
@@ -40,6 +44,10 @@ export async function proxy(request: NextRequest) {
 
     if (!membership) {
       return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    if (url === "/admin/login") {
+      return NextResponse.redirect(new URL("/admin", request.url));
     }
   }
 
@@ -65,7 +73,6 @@ export async function proxy(request: NextRequest) {
   }
 
   // Not staff — protect staff routes from unauthenticated access.
-  // /admin handles authentication and restaurant_members checks on the page.
   if (url.startsWith("/staff") && url !== "/staff/login") {
     return NextResponse.redirect(new URL("/staff/login", request.url));
   }

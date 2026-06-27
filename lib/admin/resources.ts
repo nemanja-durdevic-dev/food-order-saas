@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { ClipboardList, MapPin, Tags, UtensilsCrossed } from "lucide-react";
+import { ClipboardList, ListTree, Tags, UtensilsCrossed } from "lucide-react";
 
 export type AdminColumn = {
   key: string;
@@ -23,25 +23,6 @@ export type AdminResource = {
 
 export const adminResources: AdminResource[] = [
   {
-    slug: "locations",
-    label: "Location",
-    pluralLabel: "Locations",
-    icon: MapPin,
-    table: "locations",
-    description: "Pickup locations, opening state, contact details, and hours.",
-    select: "id, name, address, phone, is_open, updated_at",
-    columns: [
-      { key: "name", label: "Name" },
-      { key: "address", label: "Address" },
-      { key: "phone", label: "Phone" },
-      { key: "is_open", label: "Open", type: "boolean" },
-      { key: "updated_at", label: "Updated", type: "datetime" },
-    ],
-    searchColumns: ["name", "address", "phone"],
-    restaurantScoped: true,
-    sort: { column: "name", ascending: true },
-  },
-  {
     slug: "categories",
     label: "Category",
     pluralLabel: "Categories",
@@ -51,6 +32,25 @@ export const adminResources: AdminResource[] = [
     select: "id, name, name_no, sort_order, updated_at",
     columns: [
       { key: "name", label: "Name" },
+      { key: "name_no", label: "Norwegian" },
+      { key: "sort_order", label: "Sort" },
+      { key: "updated_at", label: "Updated", type: "datetime" },
+    ],
+    searchColumns: ["name", "name_no", "name_sv", "name_da"],
+    restaurantScoped: true,
+    sort: { column: "sort_order", ascending: true },
+  },
+  {
+    slug: "subcategories",
+    label: "Subcategory",
+    pluralLabel: "Subcategories",
+    icon: ListTree,
+    table: "subcategories",
+    description: "Nested menu sections within categories and their localized names.",
+    select: "id, name, name_no, sort_order, updated_at, categories(name)",
+    columns: [
+      { key: "name", label: "Name" },
+      { key: "categories.name", label: "Category" },
       { key: "name_no", label: "Norwegian" },
       { key: "sort_order", label: "Sort" },
       { key: "updated_at", label: "Updated", type: "datetime" },

@@ -4,8 +4,6 @@ import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { createClient } from "@/lib/supabase-server";
 
-import { AdminLoginForm } from "../admin-login-form";
-
 type CheckStatus = "complete" | "missing" | "warning";
 
 type ConfigurationCheck = {
@@ -65,7 +63,7 @@ export default async function AdminConfigurationPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return <AdminLoginForm />;
+    redirect("/admin/login");
   }
 
   const { data: membership } = await supabase
