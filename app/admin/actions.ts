@@ -46,13 +46,19 @@ function getStringValue(formData: FormData, key: string) {
   return value.trim();
 }
 
-async function validateRelation(table: string, id: string, restaurantId: string) {
-  const { data, error } = await supabaseAdmin
-    .from(table)
-    .select("id")
-    .eq("id", id)
-    .eq("restaurant_id", restaurantId)
-    .maybeSingle();
+async function validateRelation(
+  table: string,
+  id: string,
+  restaurantId: string,
+  restaurantScoped = true,
+) {
+  let query = supabaseAdmin.from(table).select("id").eq("id", id);
+
+  if (restaurantScoped) {
+    query = query.eq("restaurant_id", restaurantId);
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error || !data) {
     throw new Error("Selected related record is not available.");
@@ -74,10 +80,35 @@ async function buildAdminPayload(collection: string, formData: FormData, mode: "
   }
 
   const payload: Record<string, boolean | number | string | null> = {};
+  const relationshipValues: Record<string, string[]> = {};
 
   for (const field of fields) {
     if (field.type === "boolean") {
       payload[field.key] = formData.get(field.key) === "on";
+      continue;
+    }
+
+    if (field.type === "multiselect") {
+      const values = formData
+        .getAll(field.key)
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+
+      if (field.required && values.length === 0) {
+        throw new Error(`${field.label} is required.`);
+      }
+
+      if (field.relation) {
+        for (const value of values) {
+          await validateRelation(
+            field.relation.table,
+            value,
+            membership.restaurant_id,
+            field.relation.restaurantScoped !== false,
+          );
+        }
+      }
+
+      relationshipValues[field.key] = values;
       continue;
     }
 
@@ -109,7 +140,12 @@ async function buildAdminPayload(collection: string, formData: FormData, mode: "
       }
 
       if (field.relation) {
-        await validateRelation(field.relation.table, value, membership.restaurant_id);
+        await validateRelation(
+          field.relation.table,
+          value,
+          membership.restaurant_id,
+          field.relation.restaurantScoped !== false,
+        );
       }
     }
 
@@ -120,17 +156,72 @@ async function buildAdminPayload(collection: string, formData: FormData, mode: "
     payload.restaurant_id = membership.restaurant_id;
   }
 
-  return { membership, payload, resource };
+  return { membership, payload, relationshipValues, resource };
+}
+
+async function syncJoinFields(
+  collection: string,
+  sourceId: string,
+  restaurantId: string,
+  relationshipValues: Record<string, string[]>,
+) {
+  const resource = getAdminResource(collection);
+  const fields = resource?.editFields ?? resource?.createFields ?? [];
+
+  for (const field of fields) {
+    if (!field.join || !(field.key in relationshipValues)) {
+      continue;
+    }
+
+    const values = relationshipValues[field.key];
+
+    const { error: deleteError } = await supabaseAdmin
+      .from(field.join.table)
+      .delete()
+      .eq(field.join.sourceColumn, sourceId)
+      .eq("restaurant_id", restaurantId);
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
+
+    if (values.length === 0) {
+      continue;
+    }
+
+    const rows = values.map((value, index) => ({
+      restaurant_id: restaurantId,
+      [field.join!.sourceColumn]: sourceId,
+      [field.join!.targetColumn]: value,
+      sort_order: index,
+    }));
+
+    const { error: insertError } = await supabaseAdmin.from(field.join.table).insert(rows);
+
+    if (insertError) {
+      throw new Error(insertError.message);
+    }
+  }
 }
 
 export async function createAdminRecord(collection: string, formData: FormData) {
-  const { payload, resource } = await buildAdminPayload(collection, formData, "create");
+  const { membership, payload, relationshipValues, resource } = await buildAdminPayload(
+    collection,
+    formData,
+    "create",
+  );
 
-  const { error } = await supabaseAdmin.from(resource.table).insert(payload);
+  const { data, error } = await supabaseAdmin
+    .from(resource.table)
+    .insert(payload)
+    .select("id")
+    .single();
 
   if (error) {
     throw new Error(error.message);
   }
+
+  await syncJoinFields(collection, String(data.id), membership.restaurant_id, relationshipValues);
 
   revalidatePath("/admin");
   revalidatePath(`/admin/${resource.slug}`);
@@ -138,7 +229,11 @@ export async function createAdminRecord(collection: string, formData: FormData) 
 }
 
 export async function updateAdminRecord(collection: string, id: string, formData: FormData) {
-  const { membership, payload, resource } = await buildAdminPayload(collection, formData, "edit");
+  const { membership, payload, relationshipValues, resource } = await buildAdminPayload(
+    collection,
+    formData,
+    "edit",
+  );
 
   let query = supabaseAdmin.from(resource.table).update(payload).eq("id", id);
 
@@ -151,6 +246,8 @@ export async function updateAdminRecord(collection: string, id: string, formData
   if (error) {
     throw new Error(error.message);
   }
+
+  await syncJoinFields(collection, id, membership.restaurant_id, relationshipValues);
 
   revalidatePath("/admin");
   revalidatePath(`/admin/${resource.slug}`);

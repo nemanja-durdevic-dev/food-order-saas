@@ -51,11 +51,15 @@ async function withRelationOptions(fields: AdminField[], restaurantId: string) {
         return field;
       }
 
-      const { data } = await supabaseAdmin
+      let query = supabaseAdmin
         .from(field.relation.table)
-        .select(`id, ${field.relation.labelColumn}`)
-        .eq("restaurant_id", restaurantId)
-        .order(field.relation.labelColumn, { ascending: true });
+        .select(`id, ${field.relation.labelColumn}`);
+
+      if (field.relation.restaurantScoped !== false) {
+        query = query.eq("restaurant_id", restaurantId);
+      }
+
+      const { data } = await query.order(field.relation.labelColumn, { ascending: true });
 
       const relationRecords = (data ?? []) as unknown as Array<Record<string, unknown>>;
 
@@ -67,6 +71,45 @@ async function withRelationOptions(fields: AdminField[], restaurantId: string) {
         })),
       };
     }),
+  );
+}
+
+async function withJoinValues(
+  record: Record<string, unknown>,
+  fields: AdminField[],
+  sourceId: string,
+  restaurantId: string,
+) {
+  const joinEntries = await Promise.all(
+    fields.map(async (field) => {
+      if (!field.join) {
+        return null;
+      }
+
+      const { data } = await supabaseAdmin
+        .from(field.join.table)
+        .select(field.join.targetColumn)
+        .eq(field.join.sourceColumn, sourceId)
+        .eq("restaurant_id", restaurantId);
+
+      return [
+        field.key,
+        ((data ?? []) as unknown as Array<Record<string, unknown>>).map((row) =>
+          String(row[field.join!.targetColumn]),
+        ),
+      ] as const;
+    }),
+  );
+
+  return joinEntries.reduce<Record<string, unknown>>(
+    (recordWithJoins, entry) => {
+      if (entry) {
+        recordWithJoins[entry[0]] = entry[1];
+      }
+
+      return recordWithJoins;
+    },
+    { ...record },
   );
 }
 
@@ -100,7 +143,15 @@ export default async function AdminEditPage({ params, searchParams }: Props) {
     notFound();
   }
 
-  const fields = await withRelationOptions(resource.editFields, membership.restaurant_id);
+  const [fields, recordWithJoins] = await Promise.all([
+    withRelationOptions(resource.editFields, membership.restaurant_id),
+    withJoinValues(
+      record as unknown as Record<string, unknown>,
+      resource.editFields,
+      id,
+      membership.restaurant_id,
+    ),
+  ]);
   const action = updateAdminRecord.bind(null, resource.slug, id);
 
   return (
@@ -109,7 +160,7 @@ export default async function AdminEditPage({ params, searchParams }: Props) {
         action={action}
         fields={fields}
         mode="edit"
-        record={record as unknown as Record<string, unknown>}
+        record={recordWithJoins}
         resource={resource}
       />
     </AdminShell>

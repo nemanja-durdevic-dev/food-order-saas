@@ -51,11 +51,15 @@ async function withRelationOptions(fields: AdminField[], restaurantId: string) {
         return field;
       }
 
-      const { data } = await supabaseAdmin
+      let query = supabaseAdmin
         .from(field.relation.table)
-        .select(`id, ${field.relation.labelColumn}`)
-        .eq("restaurant_id", restaurantId)
-        .order(field.relation.labelColumn, { ascending: true });
+        .select(`id, ${field.relation.labelColumn}`);
+
+      if (field.relation.restaurantScoped !== false) {
+        query = query.eq("restaurant_id", restaurantId);
+      }
+
+      const { data } = await query.order(field.relation.labelColumn, { ascending: true });
 
       const relationRecords = (data ?? []) as unknown as Array<Record<string, unknown>>;
 

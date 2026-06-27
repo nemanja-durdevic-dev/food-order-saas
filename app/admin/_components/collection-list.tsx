@@ -132,7 +132,6 @@ export function CollectionList({
                     {column.label}
                   </th>
                 ))}
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -141,26 +140,27 @@ export function CollectionList({
                   className="border-b border-border last:border-b-0 hover:bg-muted/30"
                   key={String(record.id)}
                 >
-                  {resource.columns.map((column) => (
+                  {resource.columns.map((column, index) => (
                     <td className="max-w-[280px] truncate px-4 py-3 align-middle" key={column.key}>
-                      {formatValue(record, column)}
+                      {index === 0 ? (
+                        <Link
+                          className="font-medium text-foreground underline underline-offset-4"
+                          href={`/admin/${resource.slug}/edit?id=${encodeURIComponent(String(record.id))}`}
+                        >
+                          {formatValue(record, column)}
+                        </Link>
+                      ) : (
+                        formatValue(record, column)
+                      )}
                     </td>
                   ))}
-                  <td className="px-4 py-3 text-right align-middle">
-                    <Link
-                      className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
-                      href={`/admin/${resource.slug}/edit?id=${encodeURIComponent(String(record.id))}`}
-                    >
-                      Edit
-                    </Link>
-                  </td>
                 </tr>
               ))}
               {records.length === 0 ? (
                 <tr>
                   <td
                     className="px-4 py-10 text-center text-sm text-muted-foreground"
-                    colSpan={resource.columns.length + 1}
+                    colSpan={resource.columns.length}
                   >
                     No {resource.pluralLabel.toLowerCase()} found.
                   </td>

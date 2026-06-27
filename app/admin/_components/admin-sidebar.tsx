@@ -34,6 +34,21 @@ export function AdminSidebar({ activeSlug, restaurantName }: AdminSidebarProps) 
 
   const collapsed = !expanded;
   const overviewActive = pathname === "/admin";
+  const groupedResources = adminResources.reduce(
+    (groups, resource) => {
+      const groupName = resource.group ?? "";
+      const group = groups.find((entry) => entry.name === groupName);
+
+      if (group) {
+        group.resources.push(resource);
+      } else {
+        groups.push({ name: groupName, resources: [resource] });
+      }
+
+      return groups;
+    },
+    [] as { name: string; resources: typeof adminResources }[],
+  );
 
   function renderSidebarContent(isCollapsed: boolean, onNavigate?: () => void) {
     return (
@@ -79,27 +94,37 @@ export function AdminSidebar({ activeSlug, restaurantName }: AdminSidebarProps) 
             {!isCollapsed ? <span>Overview</span> : null}
           </Link>
 
-          {adminResources.map((resource) => {
-            const isActive = resource.slug === activeSlug;
-            const Icon = resource.icon;
+          {groupedResources.map((group) => (
+            <div className="mt-4 flex flex-col gap-1 first:mt-0" key={group.name || "ungrouped"}>
+              {group.name && !isCollapsed ? (
+                <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {group.name}
+                </p>
+              ) : null}
 
-            return (
-              <Link
-                className={`flex items-center gap-3 rounded-md px-3 py-2 font-medium transition-colors ${isCollapsed ? "justify-center" : ""} ${
-                  isActive
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-                href={`/admin/${resource.slug}`}
-                key={resource.slug}
-                onClick={onNavigate}
-                title={isCollapsed ? resource.pluralLabel : undefined}
-              >
-                <Icon className="size-5 shrink-0" />
-                {!isCollapsed ? <span>{resource.pluralLabel}</span> : null}
-              </Link>
-            );
-          })}
+              {group.resources.map((resource) => {
+                const isActive = resource.slug === activeSlug;
+                const Icon = resource.icon;
+
+                return (
+                  <Link
+                    className={`flex items-center gap-3 rounded-md px-3 py-2 font-medium transition-colors ${isCollapsed ? "justify-center" : ""} ${
+                      isActive
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                    href={`/admin/${resource.slug}`}
+                    key={resource.slug}
+                    onClick={onNavigate}
+                    title={isCollapsed ? resource.pluralLabel : undefined}
+                  >
+                    <Icon className="size-5 shrink-0" />
+                    {!isCollapsed ? <span>{resource.pluralLabel}</span> : null}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         <button

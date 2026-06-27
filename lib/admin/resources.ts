@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { ClipboardList, ListTree, Tags, UtensilsCrossed } from "lucide-react";
+import { CirclePlus, ClipboardList, Leaf, ListTree, Tags, UtensilsCrossed } from "lucide-react";
 
 export type AdminColumn = {
   key: string;
@@ -15,11 +15,17 @@ export type AdminFieldOption = {
 export type AdminField = {
   key: string;
   label: string;
-  type: "boolean" | "number" | "select" | "text" | "textarea";
+  type: "boolean" | "multiselect" | "number" | "select" | "text" | "textarea";
   helpText?: string;
+  join?: {
+    table: string;
+    sourceColumn: string;
+    targetColumn: string;
+  };
   options?: AdminFieldOption[];
   relation?: {
     labelColumn: string;
+    restaurantScoped?: boolean;
     table: string;
   };
   required?: boolean;
@@ -29,6 +35,7 @@ export type AdminResource = {
   slug: string;
   label: string;
   pluralLabel: string;
+  group?: string;
   icon: LucideIcon;
   table: string;
   description: string;
@@ -78,6 +85,42 @@ const menuItemFields: AdminField[] = [
   { key: "price", label: "Price", type: "number", required: true },
   categoryRelationField,
   subcategoryRelationField,
+  {
+    key: "add_on_option_ids",
+    label: "Add Ons",
+    helpText: "Options customers can add to this item.",
+    join: {
+      table: "menu_item_add_on_options",
+      sourceColumn: "menu_item_id",
+      targetColumn: "add_on_option_id",
+    },
+    relation: { table: "add_on_options", labelColumn: "name" },
+    type: "multiselect",
+  },
+  {
+    key: "ingredient_ids",
+    label: "Ingredients",
+    helpText: "Ingredients shown for this item.",
+    join: {
+      table: "menu_item_ingredients",
+      sourceColumn: "menu_item_id",
+      targetColumn: "ingredient_id",
+    },
+    relation: { table: "ingredients", labelColumn: "name", restaurantScoped: false },
+    type: "multiselect",
+  },
+  {
+    key: "allergen_ids",
+    label: "Allergens",
+    helpText: "Allergens shown for this item.",
+    join: {
+      table: "menu_item_allergens",
+      sourceColumn: "menu_item_id",
+      targetColumn: "allergen_id",
+    },
+    relation: { table: "allergens", labelColumn: "name", restaurantScoped: false },
+    type: "multiselect",
+  },
   { key: "is_available", label: "Available", type: "boolean" },
 ];
 
@@ -86,6 +129,7 @@ export const adminResources: AdminResource[] = [
     slug: "categories",
     label: "Category",
     pluralLabel: "Categories",
+    group: "Menu",
     icon: Tags,
     table: "categories",
     description: "Menu sections and localized category names.",
@@ -107,6 +151,7 @@ export const adminResources: AdminResource[] = [
     slug: "subcategories",
     label: "Subcategory",
     pluralLabel: "Subcategories",
+    group: "Menu",
     icon: ListTree,
     table: "subcategories",
     description: "Nested menu sections within categories and their localized names.",
@@ -127,8 +172,9 @@ export const adminResources: AdminResource[] = [
   },
   {
     slug: "menu-items",
-    label: "Menu Item",
-    pluralLabel: "Menu Items",
+    label: "Item",
+    pluralLabel: "Items",
+    group: "Menu",
     icon: UtensilsCrossed,
     table: "menu_items",
     description: "Dishes, prices, images, availability, and localized copy.",
@@ -146,6 +192,65 @@ export const adminResources: AdminResource[] = [
     editFields: menuItemFields,
     formSelect:
       "id, category_id, subcategory_id, is_available, name, name_no, name_sv, name_da, description, description_no, description_sv, description_da, image_url, price",
+  },
+  {
+    slug: "ingredients",
+    label: "Ingredient",
+    pluralLabel: "Ingredients",
+    group: "Menu",
+    icon: Leaf,
+    table: "ingredients",
+    description: "Reusable ingredients that can be assigned to menu items.",
+    select: "id, name, name_no, updated_at",
+    columns: [
+      { key: "name", label: "Name" },
+      { key: "name_no", label: "Norwegian" },
+      { key: "updated_at", label: "Updated", type: "datetime" },
+    ],
+    searchColumns: ["name", "name_no", "name_sv", "name_da"],
+    sort: { column: "name", ascending: true },
+    createFields: localizedNameFields.slice(0, 4),
+    editFields: localizedNameFields.slice(0, 4),
+    formSelect: "id, name, name_no, name_sv, name_da",
+  },
+  {
+    slug: "add-ons",
+    label: "Add On",
+    pluralLabel: "Add Ons",
+    group: "Menu",
+    icon: CirclePlus,
+    table: "add_on_options",
+    description: "Optional extras customers can add to menu items.",
+    select: "id, name, name_no, price, is_available, sort_order, updated_at",
+    columns: [
+      { key: "name", label: "Name" },
+      { key: "price", label: "Price", type: "currency" },
+      { key: "is_available", label: "Available", type: "boolean" },
+      { key: "sort_order", label: "Sort" },
+      { key: "updated_at", label: "Updated", type: "datetime" },
+    ],
+    searchColumns: ["name", "name_no", "name_sv", "name_da"],
+    restaurantScoped: true,
+    sort: { column: "sort_order", ascending: true },
+    createFields: [
+      { key: "name", label: "Name", type: "text", required: true },
+      { key: "name_no", label: "Norwegian name", type: "text" },
+      { key: "name_sv", label: "Swedish name", type: "text" },
+      { key: "name_da", label: "Danish name", type: "text" },
+      { key: "price", label: "Price", type: "number", required: true },
+      { key: "is_available", label: "Available", type: "boolean" },
+      { key: "sort_order", label: "Sort order", type: "number", required: true },
+    ],
+    editFields: [
+      { key: "name", label: "Name", type: "text", required: true },
+      { key: "name_no", label: "Norwegian name", type: "text" },
+      { key: "name_sv", label: "Swedish name", type: "text" },
+      { key: "name_da", label: "Danish name", type: "text" },
+      { key: "price", label: "Price", type: "number", required: true },
+      { key: "is_available", label: "Available", type: "boolean" },
+      { key: "sort_order", label: "Sort order", type: "number", required: true },
+    ],
+    formSelect: "id, name, name_no, name_sv, name_da, price, is_available, sort_order",
   },
   {
     slug: "orders",

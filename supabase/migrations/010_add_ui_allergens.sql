@@ -1,0 +1,31 @@
+insert into public.allergens (name, name_no, name_sv, name_da)
+values
+  ('Almonds', 'Mandler', 'Mandlar', 'Mandler'),
+  ('Barley', 'Bygg', 'Korn', 'Byg'),
+  ('Brazil nuts', 'Paranøtter', 'Paranötter', 'Paranødder'),
+  ('Cashews', 'Cashewnøtter', 'Cashewnötter', 'Cashewnødder'),
+  ('Celery', 'Selleri', 'Selleri', 'Selleri'),
+  ('Cereals', 'Korn', 'Spannmål', 'Korn'),
+  ('Crustaceans', 'Skalldyr', 'Skaldjur', 'Skaldyr'),
+  ('Durum wheat', 'Durumhvete', 'Durumvete', 'Durumhvede'),
+  ('Einkorn', 'Enkorn', 'Enkorn', 'Enkorn'),
+  ('Emmer', 'Emmer', 'Emmer', 'Emmer'),
+  ('Fish', 'Fisk', 'Fisk', 'Fisk'),
+  ('Hazelnuts', 'Hasselnøtter', 'Hasselnötter', 'Hasselnødder'),
+  ('Kamut', 'Kamut', 'Kamut', 'Kamut'),
+  ('Lupin', 'Lupin', 'Lupin', 'Lupin'),
+  ('Macadamia nuts', 'Macadamianøtter', 'Macadamianötter', 'Macadamianødder'),
+  ('Molluscs', 'Bløtdyr', 'Blötdjur', 'Bløddyr'),
+  ('Peanuts', 'Peanøtter', 'Jordnötter', 'Jordnødder'),
+  ('Pecan nuts', 'Pekannøtter', 'Pekannötter', 'Pekannødder'),
+  ('Pistachios', 'Pistasjnøtter', 'Pistaschnötter', 'Pistacienødder'),
+  ('Rye', 'Rug', 'Råg', 'Rug'),
+  ('Soy', 'Soya', 'Soja', 'Soja'),
+  ('Spelt', 'Spelt', 'Dinkel', 'Spelt'),
+  ('Triticale', 'Rughvete', 'Rågvete', 'Rughvede'),
+  ('Walnuts', 'Valnøtter', 'Valnötter', 'Valnødder'),
+  ('Wheat', 'Hvete', 'Vete', 'Hvede')
+on conflict (name) do update set
+  name_no = excluded.name_no,
+  name_sv = excluded.name_sv,
+  name_da = excluded.name_da;

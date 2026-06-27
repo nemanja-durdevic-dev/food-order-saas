@@ -22,6 +22,16 @@ function getDefaultValue(record: AdminRecord | undefined, key: string) {
   return String(value);
 }
 
+function getDefaultValues(record: AdminRecord | undefined, key: string) {
+  const value = record?.[key];
+
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map(String);
+}
+
 function renderField(field: AdminField, record: AdminRecord | undefined) {
   const defaultValue = getDefaultValue(record, field.key);
   const inputClassName =
@@ -65,6 +75,22 @@ function renderField(field: AdminField, record: AdminRecord | undefined) {
           required={field.required}
         >
           <option value="">{field.required ? "Select an option" : "None"}</option>
+          {(field.options ?? []).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : null}
+
+      {field.type === "multiselect" ? (
+        <select
+          className="mt-1 min-h-36 w-full rounded-md border border-input bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+          defaultValue={getDefaultValues(record, field.key)}
+          multiple
+          name={field.key}
+          required={field.required}
+        >
           {(field.options ?? []).map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
