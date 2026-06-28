@@ -15,7 +15,7 @@ export type AdminFieldOption = {
 export type AdminField = {
   key: string;
   label: string;
-  type: "boolean" | "multiselect" | "number" | "select" | "text" | "textarea";
+  type: "boolean" | "image" | "multiselect" | "number" | "select" | "text" | "textarea";
   helpText?: string;
   join?: {
     table: string;
@@ -82,7 +82,7 @@ const menuItemFields: AdminField[] = [
   { key: "description_no", label: "Norwegian description", type: "textarea" },
   { key: "description_sv", label: "Swedish description", type: "textarea" },
   { key: "description_da", label: "Danish description", type: "textarea" },
-  { key: "image_url", label: "Image URL", type: "text" },
+  { key: "image_url", label: "Image", type: "image" },
   { key: "price", label: "Price", type: "number", required: true },
   categoryRelationField,
   subcategoryRelationField,

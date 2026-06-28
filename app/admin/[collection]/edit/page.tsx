@@ -186,6 +186,19 @@ export default async function AdminEditPage({ params, searchParams }: Props) {
     membership.restaurant_id,
     recordWithJoins,
   );
+  const imageValues = resource.editFields.reduce<Record<string, string>>((values, field) => {
+    if (field.type !== "image") {
+      return values;
+    }
+
+    const value = recordWithJoins[field.key];
+
+    if (typeof value === "string" && value.length > 0) {
+      values[field.key] = value;
+    }
+
+    return values;
+  }, {});
   const action = updateAdminRecord.bind(null, resource.slug, id);
   const duplicateAction = duplicateAdminRecord.bind(null, resource.slug, id);
   const deleteAction = deleteAdminRecord.bind(null, resource.slug, id);
@@ -206,6 +219,7 @@ export default async function AdminEditPage({ params, searchParams }: Props) {
         deleteAction={deleteAction}
         duplicateAction={duplicateAction}
         fields={fields}
+        imageValues={imageValues}
         mode="edit"
         record={recordWithJoins}
         resource={{

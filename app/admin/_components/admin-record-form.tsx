@@ -1,8 +1,10 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import Link from "next/link";
 import { Ellipsis } from "lucide-react";
-import { type ChangeEvent, useMemo, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -17,6 +19,7 @@ type AdminRecordFormProps = {
   deleteAction?: (formData: FormData) => void | Promise<void>;
   duplicateAction?: (formData: FormData) => void | Promise<void>;
   fields: AdminField[];
+  imageValues?: Record<string, string>;
   mode: "create" | "edit";
   record?: AdminRecord;
   resource: {
@@ -86,10 +89,352 @@ function formatDateTime(value: unknown) {
   }).format(new Date(String(value)));
 }
 
+type ImageUploadFieldProps = {
+  field: AdminField;
+  savedUrl: string;
+  onValueChange: (key: string, values: string[]) => void;
+};
+
+const CROP_STAGE_WIDTH = 352;
+const CROP_STAGE_HEIGHT = 256;
+const CROP_FRAME_SIZE = 216;
+
+function getContainedSize(width: number, height: number) {
+  const scale = Math.min(CROP_STAGE_WIDTH / width, CROP_STAGE_HEIGHT / height);
+
+  return {
+    height: height * scale,
+    width: width * scale,
+  };
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not load image."));
+    image.src = src;
+  });
+}
+
+async function cropImageToSquare(
+  file: File,
+  src: string,
+  zoom: number,
+  offsetX: number,
+  offsetY: number,
+) {
+  const image = await loadImage(src);
+  const canvas = document.createElement("canvas");
+  const size = 1200;
+  canvas.width = size;
+  canvas.height = size;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("Could not crop image.");
+  }
+
+  const containedSize = getContainedSize(image.naturalWidth, image.naturalHeight);
+  const displayedWidth = containedSize.width * zoom;
+  const displayedHeight = containedSize.height * zoom;
+  const imageX = (CROP_STAGE_WIDTH - displayedWidth) / 2 + offsetX;
+  const imageY = (CROP_STAGE_HEIGHT - displayedHeight) / 2 + offsetY;
+  const frameX = (CROP_STAGE_WIDTH - CROP_FRAME_SIZE) / 2;
+  const frameY = (CROP_STAGE_HEIGHT - CROP_FRAME_SIZE) / 2;
+  const sourceX = ((frameX - imageX) / displayedWidth) * image.naturalWidth;
+  const sourceY = ((frameY - imageY) / displayedHeight) * image.naturalHeight;
+  const sourceWidth = (CROP_FRAME_SIZE / displayedWidth) * image.naturalWidth;
+  const sourceHeight = (CROP_FRAME_SIZE / displayedHeight) * image.naturalHeight;
+
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, size, size);
+
+  return new Promise<File>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("Could not crop image."));
+          return;
+        }
+
+        const baseName = file.name.replace(/\.[^.]+$/, "") || "menu-item-image";
+        resolve(new File([blob], `${baseName}.jpg`, { type: "image/jpeg" }));
+      },
+      "image/jpeg",
+      0.9,
+    );
+  });
+}
+
+function ImageUploadField({ field, onValueChange, savedUrl }: ImageUploadFieldProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [cropSource, setCropSource] = useState<{ file: File; url: string } | null>(null);
+  const [cropError, setCropError] = useState<string | null>(null);
+  const [cropImageSize, setCropImageSize] = useState<{ height: number; width: number } | null>(
+    null,
+  );
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropOffsetX, setCropOffsetX] = useState(0);
+  const [cropOffsetY, setCropOffsetY] = useState(0);
+  const previewUrl = objectUrl ?? savedUrl;
+  const containedCropSize = cropImageSize
+    ? getContainedSize(cropImageSize.width, cropImageSize.height)
+    : null;
+  const minCropZoom = containedCropSize
+    ? Math.max(
+        CROP_FRAME_SIZE / containedCropSize.width,
+        CROP_FRAME_SIZE / containedCropSize.height,
+      )
+    : 1;
+  const displayedCropWidth = containedCropSize ? containedCropSize.width * cropZoom : 0;
+  const displayedCropHeight = containedCropSize ? containedCropSize.height * cropZoom : 0;
+  const maxCropOffsetX = Math.max(0, (displayedCropWidth - CROP_FRAME_SIZE) / 2);
+  const maxCropOffsetY = Math.max(0, (displayedCropHeight - CROP_FRAME_SIZE) / 2);
+  const displayedCropX = (CROP_STAGE_WIDTH - displayedCropWidth) / 2 + cropOffsetX;
+  const displayedCropY = (CROP_STAGE_HEIGHT - displayedCropHeight) / 2 + cropOffsetY;
+
+  useEffect(() => {
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+
+      if (cropSource) {
+        URL.revokeObjectURL(cropSource.url);
+      }
+    };
+  }, [cropSource, objectUrl]);
+
+  function closeCropDialog() {
+    if (cropSource) {
+      URL.revokeObjectURL(cropSource.url);
+    }
+
+    setCropSource(null);
+    setCropError(null);
+    setCropImageSize(null);
+    setCropZoom(1);
+    setCropOffsetX(0);
+    setCropOffsetY(0);
+
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  }
+
+  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      onValueChange(field.key, [savedUrl]);
+      return;
+    }
+
+    const nextObjectUrl = URL.createObjectURL(file);
+    setCropSource({ file, url: nextObjectUrl });
+    setCropError(null);
+    setCropImageSize(null);
+    setCropZoom(1);
+    setCropOffsetX(0);
+    setCropOffsetY(0);
+  }
+
+  async function confirmCrop() {
+    if (!cropSource || !inputRef.current) {
+      return;
+    }
+
+    try {
+      const croppedFile = await cropImageToSquare(
+        cropSource.file,
+        cropSource.url,
+        cropZoom,
+        cropOffsetX,
+        cropOffsetY,
+      );
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(croppedFile);
+      inputRef.current.files = dataTransfer.files;
+
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+
+      const nextPreviewUrl = URL.createObjectURL(croppedFile);
+      URL.revokeObjectURL(cropSource.url);
+      setObjectUrl(nextPreviewUrl);
+      setCropSource(null);
+      setCropError(null);
+      onValueChange(field.key, [croppedFile.name]);
+    } catch (error) {
+      setCropError(error instanceof Error ? error.message : "Could not crop image.");
+    }
+  }
+
+  return (
+    <div className="block text-sm" key={field.key}>
+      <span className="font-medium">
+        {field.label}
+        {field.required ? <span className="text-destructive"> *</span> : null}
+      </span>
+
+      <div className="mt-2 overflow-hidden rounded-md border border-border bg-muted">
+        {previewUrl ? (
+          <img
+            alt="Current image preview"
+            className="h-48 w-full object-cover sm:h-64"
+            src={previewUrl}
+          />
+        ) : (
+          <div className="flex h-48 items-center justify-center px-4 text-sm text-muted-foreground sm:h-64">
+            No image selected
+          </div>
+        )}
+      </div>
+
+      <input name={field.key} type="hidden" value={savedUrl} />
+      <input
+        accept="image/*"
+        className="mt-3 block w-full text-sm file:mr-4 file:h-9 file:rounded-md file:border-0 file:bg-foreground file:px-3 file:text-sm file:font-medium file:text-background hover:file:bg-foreground/90"
+        name={`${field.key}_file`}
+        onChange={handleImageChange}
+        ref={inputRef}
+        required={field.required && !savedUrl}
+        type="file"
+      />
+
+      {cropSource ? (
+        <div
+          aria-modal="true"
+          className="fixed inset-0 z-[70] flex items-end bg-foreground/40 p-4 backdrop-blur-sm sm:items-center sm:justify-center"
+          role="dialog"
+        >
+          <div className="w-full max-w-lg rounded-xl bg-background p-5 shadow-2xl">
+            <div className="border-b border-border pb-4">
+              <h3 className="text-lg font-semibold">Crop image</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Adjust the image so it fits the square menu item format.
+              </p>
+            </div>
+
+            <div className="mt-5 flex justify-center">
+              <div
+                className="relative overflow-hidden rounded-md border border-border bg-muted"
+                style={{ height: CROP_STAGE_HEIGHT, maxWidth: "100%", width: CROP_STAGE_WIDTH }}
+              >
+                <img
+                  alt="Crop preview"
+                  className="absolute max-w-none select-none"
+                  onLoad={(event) => {
+                    const image = event.currentTarget;
+                    const nextImageSize = {
+                      height: image.naturalHeight,
+                      width: image.naturalWidth,
+                    };
+                    const nextContainedSize = getContainedSize(
+                      nextImageSize.width,
+                      nextImageSize.height,
+                    );
+                    const nextMinZoom = Math.max(
+                      CROP_FRAME_SIZE / nextContainedSize.width,
+                      CROP_FRAME_SIZE / nextContainedSize.height,
+                    );
+
+                    setCropImageSize(nextImageSize);
+                    setCropZoom(Number(nextMinZoom.toFixed(2)));
+                  }}
+                  src={cropSource.url}
+                  style={{
+                    height: displayedCropHeight || "auto",
+                    left: displayedCropX,
+                    top: displayedCropY,
+                    width: displayedCropWidth || "auto",
+                  }}
+                />
+                <div
+                  className="absolute border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
+                  style={{
+                    height: CROP_FRAME_SIZE,
+                    left: (CROP_STAGE_WIDTH - CROP_FRAME_SIZE) / 2,
+                    top: (CROP_STAGE_HEIGHT - CROP_FRAME_SIZE) / 2,
+                    width: CROP_FRAME_SIZE,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <label className="block text-sm">
+                <span className="font-medium">Zoom</span>
+                <input
+                  className="mt-2 w-full"
+                  max={Math.max(3, minCropZoom + 2)}
+                  min={minCropZoom}
+                  onChange={(event) => {
+                    const nextZoom = Number(event.target.value);
+                    setCropZoom(nextZoom);
+                    setCropOffsetX(0);
+                    setCropOffsetY(0);
+                  }}
+                  step="0.05"
+                  type="range"
+                  value={cropZoom}
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="font-medium">Horizontal position</span>
+                <input
+                  className="mt-2 w-full"
+                  max={maxCropOffsetX}
+                  min={-maxCropOffsetX}
+                  onChange={(event) => setCropOffsetX(Number(event.target.value))}
+                  step="1"
+                  type="range"
+                  value={cropOffsetX}
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="font-medium">Vertical position</span>
+                <input
+                  className="mt-2 w-full"
+                  max={maxCropOffsetY}
+                  min={-maxCropOffsetY}
+                  onChange={(event) => setCropOffsetY(Number(event.target.value))}
+                  step="1"
+                  type="range"
+                  value={cropOffsetY}
+                />
+              </label>
+            </div>
+
+            {cropError ? <p className="mt-4 text-sm text-destructive">{cropError}</p> : null}
+
+            <div className="mt-5 flex justify-between border-t border-border pt-4">
+              <Button onClick={closeCropDialog} type="button" variant="outline">
+                Cancel
+              </Button>
+              <Button onClick={confirmCrop} type="button">
+                Use cropped image
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {field.helpText ? (
+        <span className="mt-1 block text-xs text-muted-foreground">{field.helpText}</span>
+      ) : null}
+    </div>
+  );
+}
+
 function renderField(
   field: AdminField,
   record: AdminRecord | undefined,
   resourceSlug: string,
+  imageValues: Record<string, string>,
   onValueChange: (key: string, values: string[]) => void,
 ) {
   const defaultValue = getDefaultValue(record, field.key);
@@ -126,6 +471,19 @@ function renderField(
             ? `/api/admin/relation-options?collection=${resourceSlug}&field=${field.key}`
             : undefined
         }
+      />
+    );
+  }
+
+  if (field.type === "image") {
+    const savedUrl = imageValues[field.key] ?? defaultValue;
+
+    return (
+      <ImageUploadField
+        field={field}
+        key={`${field.key}-${savedUrl}`}
+        onValueChange={onValueChange}
+        savedUrl={savedUrl}
       />
     );
   }
@@ -186,6 +544,7 @@ export function AdminRecordForm({
   deleteAction,
   duplicateAction,
   fields,
+  imageValues = {},
   mode,
   record,
   resource,
@@ -222,7 +581,7 @@ export function AdminRecordForm({
       return;
     }
 
-    if (!field.name) {
+    if (!field.name || field.name.endsWith("_file")) {
       return;
     }
 
@@ -307,7 +666,9 @@ export function AdminRecordForm({
           ) : null}
         </div>
 
-        {fields.map((field) => renderField(field, record, resource.slug, updateChangedField))}
+        {fields.map((field) =>
+          renderField(field, record, resource.slug, imageValues, updateChangedField),
+        )}
       </form>
     </div>
   );
