@@ -602,12 +602,13 @@ export function AdminRecordForm({
   const [changedFields, setChangedFields] = useState<Record<string, boolean>>({});
   const hasChanges = Object.values(changedFields).some(Boolean);
   const [state, formAction] = useActionState<ActionState, FormData>(action, null);
-  const toggleChecked =
+  const [toggleChecked, setToggleChecked] = useState(
     mode === "edit" && resource.toggleField && record
       ? resource.toggleField.trueValue !== undefined
         ? record[resource.toggleField.key] === resource.toggleField.trueValue
         : Boolean(record[resource.toggleField.key])
-      : false;
+      : false,
+  );
 
   useEffect(() => {
     if (!state) return;
@@ -721,6 +722,7 @@ export function AdminRecordForm({
                       return;
                     }
 
+                    setToggleChecked(!toggleChecked);
                     field.dispatchEvent(new Event("change", { bubbles: true }));
                   }}
                   role="switch"
