@@ -1,7 +1,5 @@
 "use client";
 
-import { saveLocationHours } from "@/app/admin/actions";
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
 type HourRow = {
@@ -11,9 +9,8 @@ type HourRow = {
   is_closed: boolean;
 };
 
-type LocationHoursEditorProps = {
+type LocationHoursSectionProps = {
   hours: HourRow[];
-  locationId: string;
 };
 
 const DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -23,7 +20,7 @@ function formatTime(time: string | null) {
   return time.length >= 5 ? time.slice(0, 5) : time;
 }
 
-export function LocationHoursEditor({ hours, locationId }: LocationHoursEditorProps) {
+export function LocationHoursSection({ hours }: LocationHoursSectionProps) {
   const hoursByDay = new Map(hours.map((h) => [h.day, h]));
   const [closedByDay, setClosedByDay] = useState<Record<number, boolean>>(() => {
     const closed: Record<number, boolean> = {};
@@ -32,11 +29,9 @@ export function LocationHoursEditor({ hours, locationId }: LocationHoursEditorPr
     }
     return closed;
   });
-  const action = saveLocationHours.bind(null, locationId);
-  const hasHours = hours.length > 0;
 
   return (
-    <form action={action} className="max-w-xl space-y-5">
+    <div className="space-y-5">
       <div>
         <h3 className="text-lg font-semibold">Opening Hours</h3>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -89,17 +84,6 @@ export function LocationHoursEditor({ hours, locationId }: LocationHoursEditorPr
           );
         })}
       </div>
-
-      <div className="flex items-center gap-3">
-        <Button size="sm" type="submit">
-          Save Hours
-        </Button>
-        {!hasHours ? (
-          <span className="text-xs text-muted-foreground">
-            No hours set yet — fill in the times above and save.
-          </span>
-        ) : null}
-      </div>
-    </form>
+    </div>
   );
 }

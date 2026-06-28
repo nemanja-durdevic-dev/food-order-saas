@@ -1,16 +1,122 @@
 import { notFound, redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 import { getAdminResource } from "@/lib/admin/resources";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { createClient } from "@/lib/supabase-server";
-import { updateAdminRecord } from "../../actions";
 import { AdminRecordForm } from "../../_components/admin-record-form";
 import { AdminShell } from "../../_components/admin-shell";
-import { LocationHoursEditor } from "@/components/admin/location-hours-editor";
+import { LocationHoursSection } from "@/components/admin/location-hours-section";
 
 type Props = {
   searchParams?: Promise<{ id?: string }>;
 };
+
+async function updateLocation(locationId: string, formData: FormData) {
+  "use server";
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/admin/login");
+  }
+
+  const { data: membership } = await supabaseAdmin
+    .from("restaurant_members")
+    .select("restaurant_id")
+    .eq("user_id", user.id)
+    .in("role", ["admin", "owner"])
+    .limit(1)
+    .maybeSingle();
+
+  if (!membership) {
+    redirect("/");
+  }
+
+  const { data: location } = await supabaseAdmin
+    .from("locations")
+    .select("id")
+    .eq("id", locationId)
+    .eq("restaurant_id", membership.restaurant_id)
+    .maybeSingle();
+
+  if (!location) {
+    throw new Error("Location not found.");
+  }
+
+  const name = String(formData.get("name") ?? "");
+  const address = String(formData.get("address") ?? "");
+  const phone = String(formData.get("phone") ?? "");
+  const isOpen = formData.get("is_open") === "on";
+
+  if (!name) {
+    throw new Error("Name is required.");
+  }
+
+  const payload: Record<string, string | boolean | null> = {
+    name,
+    address: address || null,
+    phone: phone || null,
+    is_open: isOpen,
+  };
+
+  const file = formData.get("image_url_file");
+  const existingUrl = String(formData.get("image_url") ?? "");
+
+  if (file instanceof File && file.size > 0) {
+    const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+    const path = `${membership.restaurant_id}/menu-items/${crypto.randomUUID()}.${extension}`;
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from("menu-item-images")
+      .upload(path, file, { upsert: false });
+
+    if (uploadError) {
+      throw new Error(uploadError.message);
+    }
+
+    payload.image_url = supabaseAdmin.storage
+      .from("menu-item-images")
+      .getPublicUrl(path).data.publicUrl;
+  } else {
+    payload.image_url = existingUrl || null;
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from("locations")
+    .update(payload)
+    .eq("id", locationId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  for (const day of [0, 1, 2, 3, 4, 5, 6]) {
+    const isClosed = formData.get(`day_${day}_closed`) === "on";
+    const openTime = String(formData.get(`day_${day}_open`) ?? "");
+    const closeTime = String(formData.get(`day_${day}_close`) ?? "");
+
+    const { error: hoursError } = await supabaseAdmin.from("location_hours").upsert(
+      {
+        location_id: locationId,
+        day,
+        is_closed: isClosed,
+        open_time: isClosed || !openTime || !closeTime ? null : openTime,
+        close_time: isClosed || !openTime || !closeTime ? null : closeTime,
+      },
+      { onConflict: "location_id, day" },
+    );
+
+    if (hoursError) {
+      throw new Error(hoursError.message);
+    }
+  }
+
+  revalidatePath("/admin/locations");
+  redirect(`/admin/locations/edit?id=${encodeURIComponent(locationId)}`);
+}
 
 export default async function LocationEditPage({ searchParams }: Props) {
   const resolvedSearchParams = await (searchParams ?? Promise.resolve<{ id?: string }>({}));
@@ -70,7 +176,7 @@ export default async function LocationEditPage({ searchParams }: Props) {
     .eq("location_id", id)
     .order("day", { ascending: true });
 
-  const action = updateAdminRecord.bind(null, resource.slug, id);
+  const action = updateLocation.bind(null, id);
 
   const imageValues: Record<string, string> = {};
 
@@ -102,21 +208,20 @@ export default async function LocationEditPage({ searchParams }: Props) {
           pluralLabel: resource.pluralLabel,
           slug: resource.slug,
         }}
-      />
-
-      <div className="mt-10 border-t border-border pt-8">
-        <LocationHoursEditor
-          hours={
-            (hours ?? []) as Array<{
-              day: number;
-              open_time: string | null;
-              close_time: string | null;
-              is_closed: boolean;
-            }>
-          }
-          locationId={id}
-        />
-      </div>
+      >
+        <div className="border-t border-border pt-8">
+          <LocationHoursSection
+            hours={
+              (hours ?? []) as Array<{
+                day: number;
+                open_time: string | null;
+                close_time: string | null;
+                is_closed: boolean;
+              }>
+            }
+          />
+        </div>
+      </AdminRecordForm>
     </AdminShell>
   );
 }

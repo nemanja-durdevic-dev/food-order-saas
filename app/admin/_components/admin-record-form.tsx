@@ -16,6 +16,7 @@ type AdminRecord = Record<string, unknown>;
 type AdminRecordFormProps = {
   action: (formData: FormData) => void | Promise<void>;
   canCreate?: boolean;
+  children?: React.ReactNode;
   deleteAction?: (formData: FormData) => void | Promise<void>;
   duplicateAction?: (formData: FormData) => void | Promise<void>;
   fields: AdminField[];
@@ -558,6 +559,7 @@ function renderField(
 export function AdminRecordForm({
   action,
   canCreate = false,
+  children,
   deleteAction,
   duplicateAction,
   fields,
@@ -683,6 +685,7 @@ export function AdminRecordForm({
         {fields.map((field) =>
           renderField(field, record, resource.slug, imageValues, updateChangedField),
         )}
+        {children}
       </form>
     </div>
   );
