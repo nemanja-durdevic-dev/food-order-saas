@@ -639,7 +639,7 @@ export function AdminRecordForm({
             {mode === "create" ? "Create" : "Save"}
           </Button>
 
-          {mode === "edit" ? (
+          {mode === "edit" && (canCreate || duplicateAction || deleteAction) ? (
             <Popover>
               <PopoverTrigger asChild>
                 <Button aria-label="Open form actions" size="icon" type="button" variant="outline">
@@ -654,33 +654,27 @@ export function AdminRecordForm({
                   >
                     Create New
                   </Link>
-                ) : (
+                ) : null}
+                {duplicateAction ? (
                   <button
-                    className="flex h-9 w-full items-center rounded-md px-3 text-left text-sm font-medium opacity-50"
-                    disabled
-                    type="button"
+                    className="flex h-9 w-full items-center rounded-md px-3 text-left text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+                    form={formId}
+                    formAction={duplicateAction}
+                    type="submit"
                   >
-                    Create New
+                    Duplicate
                   </button>
-                )}
-                <button
-                  className="flex h-9 w-full items-center rounded-md px-3 text-left text-sm font-medium hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-foreground"
-                  disabled={!duplicateAction}
-                  form={formId}
-                  formAction={duplicateAction}
-                  type="submit"
-                >
-                  Duplicate
-                </button>
-                <button
-                  className="flex h-9 w-full items-center rounded-md px-3 text-left text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50 disabled:hover:bg-transparent"
-                  disabled={!deleteAction}
-                  form={formId}
-                  formAction={deleteAction}
-                  type="submit"
-                >
-                  Delete
-                </button>
+                ) : null}
+                {deleteAction ? (
+                  <button
+                    className="flex h-9 w-full items-center rounded-md px-3 text-left text-sm font-medium text-destructive hover:bg-destructive/10"
+                    form={formId}
+                    formAction={deleteAction}
+                    type="submit"
+                  >
+                    Delete
+                  </button>
+                ) : null}
               </PopoverContent>
             </Popover>
           ) : null}

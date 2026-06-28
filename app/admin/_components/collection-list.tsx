@@ -95,15 +95,7 @@ export function CollectionList({
           >
             Create {resource.label}
           </Link>
-        ) : (
-          <button
-            className="h-10 rounded-md bg-foreground px-4 text-sm font-medium text-background opacity-50"
-            disabled
-            type="button"
-          >
-            Create {resource.label}
-          </button>
-        )}
+        ) : null}
       </div>
 
       <form className="mb-4 flex max-w-md gap-2">

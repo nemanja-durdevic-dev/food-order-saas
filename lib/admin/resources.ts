@@ -256,6 +256,7 @@ export const adminResources: AdminResource[] = [
     restaurantScoped: true,
     scopeColumn: "id",
     sort: { column: "name", ascending: true },
+    allowDelete: false,
     editFields: [
       { key: "name", label: "Name", type: "text", required: true },
       { key: "description", label: "Description", type: "textarea" },
@@ -292,6 +293,7 @@ export const adminResources: AdminResource[] = [
     searchColumns: ["name", "address"],
     restaurantScoped: true,
     sort: { column: "name", ascending: true },
+    allowDelete: false,
     editFields: [
       { key: "name", label: "Name", type: "text", required: true },
       { key: "address", label: "Address", type: "text" },
