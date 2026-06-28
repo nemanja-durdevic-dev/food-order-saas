@@ -3,18 +3,30 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
-import { Ellipsis } from "lucide-react";
-import { type ChangeEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Ellipsis, LoaderCircle } from "lucide-react";
+import {
+  type ChangeEvent,
+  useActionState,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useFormStatus } from "react-dom";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { AdminField } from "@/lib/admin/resources";
 import { SearchableMultiSelect } from "./searchable-multi-select";
 
+type ActionState = { error?: string; success?: boolean } | null;
+
 type AdminRecord = Record<string, unknown>;
 
 type AdminRecordFormProps = {
-  action: (formData: FormData) => void | Promise<void>;
+  action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   canCreate?: boolean;
   children?: React.ReactNode;
   deleteAction?: (formData: FormData) => void | Promise<void>;
@@ -556,6 +568,17 @@ function renderField(
   );
 }
 
+function FormSubmitButton({ disabled, mode }: { disabled: boolean; mode: "create" | "edit" }) {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button disabled={disabled || pending} size="sm" type="submit">
+      {pending && <LoaderCircle className="mr-2 size-4 animate-spin" aria-hidden="true" />}
+      {mode === "create" ? "Create" : "Save"}
+    </Button>
+  );
+}
+
 export function AdminRecordForm({
   action,
   canCreate = false,
@@ -572,6 +595,16 @@ export function AdminRecordForm({
   const initialValues = useMemo(() => getInitialFieldValues(fields, record), [fields, record]);
   const [changedFields, setChangedFields] = useState<Record<string, boolean>>({});
   const hasChanges = Object.values(changedFields).some(Boolean);
+  const [state, formAction] = useActionState<ActionState>(action, null);
+
+  useEffect(() => {
+    if (!state) return;
+    if (state.error) {
+      toast.error(state.error);
+    } else if (state.success) {
+      toast.success("Saved");
+    }
+  }, [state]);
 
   function updateChangedField(key: string, values: string[]) {
     setChangedFields((currentChangedFields) => {
@@ -635,11 +668,14 @@ export function AdminRecordForm({
         ) : null}
       </div>
 
-      <form action={action} className="w-full space-y-5" id={formId} onChange={handleFieldChange}>
+      <form
+        action={formAction}
+        className="w-full space-y-5"
+        id={formId}
+        onChange={handleFieldChange}
+      >
         <div className="sticky top-14 z-20 flex items-center justify-between border-b border-border bg-background py-4 lg:top-0">
-          <Button disabled={!hasChanges} size="sm" type="submit">
-            {mode === "create" ? "Create" : "Save"}
-          </Button>
+          <FormSubmitButton disabled={!hasChanges} mode={mode} />
 
           {mode === "edit" && (canCreate || duplicateAction || deleteAction) ? (
             <Popover>

@@ -384,7 +384,13 @@ async function getAdminRecordForAction(collection: string, id: string) {
   return { membership, resource };
 }
 
-export async function createAdminRecord(collection: string, formData: FormData) {
+export async function createAdminRecord(
+  collection: string,
+  state: { error?: string; success?: boolean } | null,
+  formData: FormData,
+) {
+  void state;
+
   const { membership, payload, relationshipValues, resource, uploadedImageUrls } =
     await buildAdminPayload(collection, formData, "create");
 
@@ -396,23 +402,30 @@ export async function createAdminRecord(collection: string, formData: FormData) 
 
   if (error) {
     await removeAdminImages(uploadedImageUrls);
-    throw new Error(error.message);
+    return { error: error.message };
   }
 
   try {
     await syncJoinFields(collection, String(data.id), membership.restaurant_id, relationshipValues);
   } catch (error) {
     await removeAdminImages(uploadedImageUrls);
-    throw error;
+    return { error: error instanceof Error ? error.message : "Failed to sync join fields." };
   }
 
   await markMenuDirtyForResource(membership.restaurant_id, resource.slug);
   revalidatePath("/admin");
   revalidatePath(`/admin/${resource.slug}`);
-  redirect(`/admin/${resource.slug}`);
+  return { success: true };
 }
 
-export async function updateAdminRecord(collection: string, id: string, formData: FormData) {
+export async function updateAdminRecord(
+  collection: string,
+  id: string,
+  state: { error?: string; success?: boolean } | null,
+  formData: FormData,
+) {
+  void state;
+
   const { membership, payload, relationshipValues, resource, uploadedImageUrls } =
     await buildAdminPayload(collection, formData, "edit");
   const imageFieldKeys = getImageFieldKeys(resource.editFields).filter((key) => key in payload);
@@ -433,7 +446,7 @@ export async function updateAdminRecord(collection: string, id: string, formData
 
     if (error) {
       await removeAdminImages(uploadedImageUrls);
-      throw new Error(error.message);
+      return { error: error.message };
     }
 
     existingImages = (data ?? {}) as Record<string, unknown>;
@@ -450,14 +463,14 @@ export async function updateAdminRecord(collection: string, id: string, formData
 
   if (error) {
     await removeAdminImages(uploadedImageUrls);
-    throw new Error(error.message);
+    return { error: error.message };
   }
 
   try {
     await syncJoinFields(collection, id, membership.restaurant_id, relationshipValues);
   } catch (error) {
     await removeAdminImages(uploadedImageUrls);
-    throw error;
+    return { error: error instanceof Error ? error.message : "Failed to sync join fields." };
   }
 
   await removeAdminImages(
@@ -469,7 +482,7 @@ export async function updateAdminRecord(collection: string, id: string, formData
   await markMenuDirtyForResource(membership.restaurant_id, resource.slug);
   revalidatePath("/admin");
   revalidatePath(`/admin/${resource.slug}`);
-  redirect(`/admin/${resource.slug}`);
+  return { success: true };
 }
 
 export async function duplicateAdminRecord(collection: string, id: string, _formData?: FormData) {

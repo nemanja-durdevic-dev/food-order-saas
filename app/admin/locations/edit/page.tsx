@@ -12,8 +12,14 @@ type Props = {
   searchParams?: Promise<{ id?: string }>;
 };
 
-async function updateLocation(locationId: string, formData: FormData) {
+async function updateLocation(
+  locationId: string,
+  state: { error?: string; success?: boolean } | null,
+  formData: FormData,
+) {
   "use server";
+
+  void state;
 
   const supabase = await createClient();
   const {
@@ -21,7 +27,7 @@ async function updateLocation(locationId: string, formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/admin/login");
+    return { error: "Not authenticated." };
   }
 
   const { data: membership } = await supabaseAdmin
@@ -33,7 +39,7 @@ async function updateLocation(locationId: string, formData: FormData) {
     .maybeSingle();
 
   if (!membership) {
-    redirect("/");
+    return { error: "Not authorized." };
   }
 
   const { data: location } = await supabaseAdmin
@@ -44,7 +50,7 @@ async function updateLocation(locationId: string, formData: FormData) {
     .maybeSingle();
 
   if (!location) {
-    throw new Error("Location not found.");
+    return { error: "Location not found." };
   }
 
   const name = String(formData.get("name") ?? "");
@@ -53,7 +59,7 @@ async function updateLocation(locationId: string, formData: FormData) {
   const isOpen = formData.get("is_open") === "on";
 
   if (!name) {
-    throw new Error("Name is required.");
+    return { error: "Name is required." };
   }
 
   const payload: Record<string, string | boolean | null> = {
@@ -74,7 +80,7 @@ async function updateLocation(locationId: string, formData: FormData) {
       .upload(path, file, { upsert: false });
 
     if (uploadError) {
-      throw new Error(uploadError.message);
+      return { error: uploadError.message };
     }
 
     payload.image_url = supabaseAdmin.storage
@@ -90,7 +96,7 @@ async function updateLocation(locationId: string, formData: FormData) {
     .eq("id", locationId);
 
   if (updateError) {
-    throw new Error(updateError.message);
+    return { error: updateError.message };
   }
 
   for (const day of [0, 1, 2, 3, 4, 5, 6]) {
@@ -110,12 +116,12 @@ async function updateLocation(locationId: string, formData: FormData) {
     );
 
     if (hoursError) {
-      throw new Error(hoursError.message);
+      return { error: hoursError.message };
     }
   }
 
   revalidatePath("/admin/locations");
-  redirect(`/admin/locations/edit?id=${encodeURIComponent(locationId)}`);
+  return { success: true };
 }
 
 export default async function LocationEditPage({ searchParams }: Props) {
