@@ -39,17 +39,11 @@ function ChangeRow({ change }: { change: MenuChange }) {
 export function MenuChanges({ changes }: { changes: MenuChange[] }) {
   return (
     <div className="mt-3 space-y-2">
-      {changes.length > 0 ? (
-        <ul className="space-y-1">
-          {changes.map((change, i) => (
-            <ChangeRow change={change} key={i} />
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-amber-800">
-          Menu data changed (re-publish to refresh published menu).
-        </p>
-      )}
+      <ul className="space-y-1">
+        {changes.map((change, i) => (
+          <ChangeRow change={change} key={i} />
+        ))}
+      </ul>
       <form action={publishMenuChanges}>
         <button
           className="mt-2 h-9 rounded-md bg-amber-950 px-3 text-sm font-medium text-white"

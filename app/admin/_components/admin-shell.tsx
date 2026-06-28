@@ -35,7 +35,7 @@ export async function AdminShell({
           className="mb-6 hidden text-sm text-muted-foreground lg:block"
           items={resolvedBreadcrumbItems}
         />
-        {menuDirty ? (
+        {menuChanges.length > 0 ? (
           <section className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-950">
             <div>
               <p className="text-sm font-semibold">Unpublished menu changes</p>
