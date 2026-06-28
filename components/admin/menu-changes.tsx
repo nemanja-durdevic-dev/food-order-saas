@@ -14,17 +14,6 @@ const CHANGE_ICON: Record<MenuChange["type"], typeof CirclePlus> = {
   item_made_unavailable: CircleMinus,
 };
 
-const CHANGE_ICON: Record<MenuChange["type"], typeof CirclePlus> = {
-  category_added: CirclePlus,
-  category_removed: CircleMinus,
-  category_renamed: PencilLine,
-  item_added: CirclePlus,
-  item_removed: CircleMinus,
-  item_price_changed: PencilLine,
-  item_made_available: CirclePlus,
-  item_made_unavailable: CircleMinus,
-};
-
 function ChangeRow({ change }: { change: MenuChange }) {
   const Icon = CHANGE_ICON[change.type];
 
