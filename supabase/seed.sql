@@ -43,7 +43,7 @@ with restaurant as (
 insert into public.location_hours (location_id, day, open_time, close_time, is_closed)
 select locations.id, hours.day, hours.open_time, hours.close_time, hours.is_closed
 from restaurant
-cross join public.locations on locations.restaurant_id = restaurant.id
+inner join public.locations on locations.restaurant_id = restaurant.id
 cross join (
   values
     ('Main Pickup Counter', 0, '10:00'::time, '21:00'::time, false),
