@@ -75,20 +75,6 @@ const categoryLocationField: AdminField = {
   type: "multiselect",
 };
 
-const subcategoryLocationField: AdminField = {
-  key: "location_ids",
-  label: "Locations",
-  helpText: "Locations where this subcategory is shown.",
-  join: {
-    table: "subcategory_locations",
-    sourceColumn: "subcategory_id",
-    targetColumn: "location_id",
-  },
-  relation: { table: "locations", labelColumn: "name" },
-  required: true,
-  type: "multiselect",
-};
-
 const menuItemLocationField: AdminField = {
   key: "location_ids",
   label: "Locations",
@@ -221,8 +207,8 @@ export const adminResources: AdminResource[] = [
     searchColumns: ["name", "name_no", "name_sv", "name_da"],
     restaurantScoped: true,
     sort: { column: "sort_order", ascending: true },
-    createFields: [categoryRelationField, ...localizedNameFields, subcategoryLocationField],
-    editFields: [categoryRelationField, ...localizedNameFields, subcategoryLocationField],
+    createFields: [categoryRelationField, ...localizedNameFields],
+    editFields: [categoryRelationField, ...localizedNameFields],
     formSelect:
       "id, category_id, name, name_no, name_sv, name_da, sort_order, created_at, updated_at",
   },

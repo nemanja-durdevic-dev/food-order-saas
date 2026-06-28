@@ -107,11 +107,6 @@ type CategoryAvailabilityRow = {
   location_id: string;
 };
 
-type SubcategoryAvailabilityRow = {
-  location_id: string;
-  subcategory_id: string;
-};
-
 function firstRelation<T>(relation: T | T[] | null) {
   return Array.isArray(relation) ? relation[0] : relation;
 }
@@ -147,7 +142,6 @@ export default async function RestaurantOrderPage({ params }: Props) {
     categoriesResult,
     subcategoriesResult,
     categoryAvailabilityResult,
-    subcategoryAvailabilityResult,
     availabilityResult,
     menuItemsResult,
     ingredientsResult,
@@ -172,10 +166,6 @@ export default async function RestaurantOrderPage({ params }: Props) {
     supabase
       .from("category_locations")
       .select("category_id, location_id")
-      .eq("restaurant_id", restaurantId),
-    supabase
-      .from("subcategory_locations")
-      .select("subcategory_id, location_id")
       .eq("restaurant_id", restaurantId),
     supabase
       .from("menu_item_locations")
@@ -243,15 +233,6 @@ export default async function RestaurantOrderPage({ params }: Props) {
     const locationIds = availableLocationIds.get(item.category_id) ?? [];
     locationIds.push(item.location_id);
     availableLocationIds.set(item.category_id, locationIds);
-
-    return availableLocationIds;
-  }, new Map<string, string[]>());
-  const availableLocationIdsBySubcategoryId = (
-    (subcategoryAvailabilityResult.data ?? []) as SubcategoryAvailabilityRow[]
-  ).reduce((availableLocationIds, item) => {
-    const locationIds = availableLocationIds.get(item.subcategory_id) ?? [];
-    locationIds.push(item.location_id);
-    availableLocationIds.set(item.subcategory_id, locationIds);
 
     return availableLocationIds;
   }, new Map<string, string[]>());
@@ -358,7 +339,6 @@ export default async function RestaurantOrderPage({ params }: Props) {
         subcategories: (subcategoriesByCategoryId.get(category.id) ?? [])
           .map((subcategory) => ({
             ...subcategory,
-            availableLocationIds: availableLocationIdsBySubcategoryId.get(subcategory.id) ?? [],
             menu_items: categoryMenuItems.filter((item) => item.subcategory_id === subcategory.id),
           }))
           .filter((subcategory) => subcategory.menu_items.length > 0),

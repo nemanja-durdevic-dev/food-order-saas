@@ -13,7 +13,6 @@ export type MenuItem = {
 };
 
 export type MenuSubcategory = {
-  availableLocationIds?: string[];
   id: string;
   name: string;
   menu_items: MenuItem[];

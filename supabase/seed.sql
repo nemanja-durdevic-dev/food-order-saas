@@ -135,17 +135,6 @@ on conflict (category_id, location_id) do update set
   restaurant_id = excluded.restaurant_id;
 
 with restaurant as (
-  select id from public.restaurants where slug = 'burger-house'
-)
-insert into public.subcategory_locations (restaurant_id, subcategory_id, location_id)
-select restaurant.id, subcategories.id, locations.id
-from restaurant
-join public.subcategories on subcategories.restaurant_id = restaurant.id
-join public.locations on locations.restaurant_id = restaurant.id
-on conflict (subcategory_id, location_id) do update set
-  restaurant_id = excluded.restaurant_id;
-
-with restaurant as (
   insert into public.restaurants (name, slug, description, brand_color, status)
   values ('Burger House', 'burger-house', 'Fresh burgers, bowls, sides, and pickup favorites.', '#f97316', 'active')
   on conflict (slug) do update set

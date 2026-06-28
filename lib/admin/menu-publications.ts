@@ -71,11 +71,6 @@ type CategoryAvailabilityRow = {
   location_id: string;
 };
 
-type SubcategoryAvailabilityRow = {
-  location_id: string;
-  subcategory_id: string;
-};
-
 export type MenuPublicationSnapshot = {
   allAllergensByLocale: Record<Locale, Array<{ id: string; name: string }>>;
   categoriesByLocale: Record<Locale, MenuCategory[]>;
@@ -112,7 +107,6 @@ export async function buildMenuPublicationSnapshot(
     categoriesResult,
     subcategoriesResult,
     categoryAvailabilityResult,
-    subcategoryAvailabilityResult,
     availabilityResult,
     menuItemsResult,
     ingredientsResult,
@@ -135,10 +129,6 @@ export async function buildMenuPublicationSnapshot(
     supabase
       .from("category_locations")
       .select("category_id, location_id")
-      .eq("restaurant_id", restaurantId),
-    supabase
-      .from("subcategory_locations")
-      .select("subcategory_id, location_id")
       .eq("restaurant_id", restaurantId),
     supabase
       .from("menu_item_locations")
@@ -180,7 +170,6 @@ export async function buildMenuPublicationSnapshot(
     categoriesResult.error?.message ??
     subcategoriesResult.error?.message ??
     categoryAvailabilityResult.error?.message ??
-    subcategoryAvailabilityResult.error?.message ??
     availabilityResult.error?.message ??
     menuItemsResult.error?.message ??
     ingredientsResult.error?.message ??
@@ -210,16 +199,6 @@ export async function buildMenuPublicationSnapshot(
 
     return availableLocationIds;
   }, new Map<string, string[]>());
-  const availableLocationIdsBySubcategoryId = (
-    (subcategoryAvailabilityResult.data ?? []) as SubcategoryAvailabilityRow[]
-  ).reduce((availableLocationIds, item) => {
-    const locationIds = availableLocationIds.get(item.subcategory_id) ?? [];
-    locationIds.push(item.location_id);
-    availableLocationIds.set(item.subcategory_id, locationIds);
-
-    return availableLocationIds;
-  }, new Map<string, string[]>());
-
   const categoriesByLocale = locales.reduce(
     (categoriesByLocale, locale) => {
       const menuItems = ((menuItemsResult.data ?? []) as MenuItemRow[]).map((item) => ({
@@ -308,7 +287,6 @@ export async function buildMenuPublicationSnapshot(
             name: category.name,
             subcategories: (subcategoriesByCategoryId.get(category.id) ?? [])
               .map((subcategory) => ({
-                availableLocationIds: availableLocationIdsBySubcategoryId.get(subcategory.id) ?? [],
                 id: subcategory.id,
                 menu_items: categoryMenuItems.filter(
                   (item) => item.subcategory_id === subcategory.id,

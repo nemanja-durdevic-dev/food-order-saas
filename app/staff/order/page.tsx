@@ -88,11 +88,6 @@ type CategoryAvailabilityRow = {
   location_id: string;
 };
 
-type SubcategoryAvailabilityRow = {
-  location_id: string;
-  subcategory_id: string;
-};
-
 type MenuItemAvailabilityRow = {
   location_id: string;
   menu_item_id: string;
@@ -109,16 +104,6 @@ function isCategoryAvailableAtLocation(category: MenuCategory, locationId: strin
   ).includes(locationId);
 }
 
-function isSubcategoryAvailableAtLocation(
-  subcategory: MenuCategory["subcategories"][number],
-  locationId: string,
-) {
-  return (
-    subcategory.availableLocationIds ??
-    subcategory.menu_items.flatMap((item) => item.availableLocationIds)
-  ).includes(locationId);
-}
-
 function getCategoriesForLocation(categories: MenuCategory[], locationId: string) {
   return categories
     .filter((category) => isCategoryAvailableAtLocation(category, locationId))
@@ -128,7 +113,9 @@ function getCategoriesForLocation(categories: MenuCategory[], locationId: string
         item.availableLocationIds.includes(locationId),
       ),
       subcategories: category.subcategories
-        .filter((subcategory) => isSubcategoryAvailableAtLocation(subcategory, locationId))
+        .filter((subcategory) =>
+          subcategory.menu_items.some((item) => item.availableLocationIds.includes(locationId)),
+        )
         .map((subcategory) => ({
           ...subcategory,
           menu_items: subcategory.menu_items.filter((item) =>
@@ -175,7 +162,6 @@ export default async function StaffOrderPage() {
     categoriesResult,
     subcategoriesResult,
     categoryAvailabilityResult,
-    subcategoryAvailabilityResult,
     itemAvailabilityResult,
     menuItemsResult,
     ingredientsResult,
@@ -196,10 +182,6 @@ export default async function StaffOrderPage() {
     supabase
       .from("category_locations")
       .select("category_id, location_id")
-      .eq("restaurant_id", location?.restaurant_id ?? ""),
-    supabase
-      .from("subcategory_locations")
-      .select("subcategory_id, location_id")
       .eq("restaurant_id", location?.restaurant_id ?? ""),
     supabase
       .from("menu_item_locations")
@@ -250,15 +232,6 @@ export default async function StaffOrderPage() {
     const locationIds = availableLocationIds.get(item.category_id) ?? [];
     locationIds.push(item.location_id);
     availableLocationIds.set(item.category_id, locationIds);
-
-    return availableLocationIds;
-  }, new Map<string, string[]>());
-  const availableLocationIdsBySubcategoryId = (
-    (subcategoryAvailabilityResult.data ?? []) as SubcategoryAvailabilityRow[]
-  ).reduce((availableLocationIds, item) => {
-    const locationIds = availableLocationIds.get(item.subcategory_id) ?? [];
-    locationIds.push(item.location_id);
-    availableLocationIds.set(item.subcategory_id, locationIds);
 
     return availableLocationIds;
   }, new Map<string, string[]>());
@@ -358,7 +331,6 @@ export default async function StaffOrderPage() {
         subcategories: (subcategoriesByCategoryId.get(category.id) ?? [])
           .map((subcategory) => ({
             ...subcategory,
-            availableLocationIds: availableLocationIdsBySubcategoryId.get(subcategory.id) ?? [],
             menu_items: categoryMenuItems.filter((item) => item.subcategory_id === subcategory.id),
           }))
           .filter((subcategory) => subcategory.menu_items.length > 0),

@@ -12,16 +12,6 @@ function isCategoryAvailableAtLocation(category: MenuCategory, locationId: strin
   ).includes(locationId);
 }
 
-function isSubcategoryAvailableAtLocation(
-  subcategory: MenuCategory["subcategories"][number],
-  locationId: string,
-) {
-  return (
-    subcategory.availableLocationIds ??
-    subcategory.menu_items.flatMap((item) => item.availableLocationIds)
-  ).includes(locationId);
-}
-
 function getCategoriesForLocation(
   categories: OrderMenuProps["categories"],
   location: Location | undefined,
@@ -38,7 +28,9 @@ function getCategoriesForLocation(
         item.availableLocationIds.includes(location.id),
       ),
       subcategories: category.subcategories
-        .filter((subcategory) => isSubcategoryAvailableAtLocation(subcategory, location.id))
+        .filter((subcategory) =>
+          subcategory.menu_items.some((item) => item.availableLocationIds.includes(location.id)),
+        )
         .map((subcategory) => ({
           ...subcategory,
           menu_items: subcategory.menu_items.filter((item) =>
