@@ -137,7 +137,11 @@ export function CollectionList({
                       {index === 0 ? (
                         <Link
                           className="font-medium text-foreground underline underline-offset-4"
-                          href={`/admin/${resource.slug}/edit?id=${encodeURIComponent(String(record.id))}`}
+                          href={
+                            resource.slug === "orders"
+                              ? `/admin/orders/${encodeURIComponent(String(record.id))}`
+                              : `/admin/${resource.slug}/edit?id=${encodeURIComponent(String(record.id))}`
+                          }
                         >
                           {formatValue(record, column)}
                         </Link>

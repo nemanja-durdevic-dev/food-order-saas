@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
@@ -115,7 +116,14 @@ export default function AdminOrders({
           <tbody>
             {filtered.map((order) => (
               <tr key={order.id} className="border-b border-border last:border-0 hover:bg-card/50">
-                <td className="px-4 py-3 font-bold">{order.order_code}</td>
+                <td className="px-4 py-3 font-bold">
+                  <Link
+                    href={`/admin/orders/${encodeURIComponent(order.id)}`}
+                    className="underline underline-offset-4 hover:text-muted-foreground"
+                  >
+                    {order.order_code}
+                  </Link>
+                </td>
                 <td className="px-4 py-3 text-muted-foreground">{order.locations?.name}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
