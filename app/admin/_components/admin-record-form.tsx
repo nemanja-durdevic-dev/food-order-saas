@@ -16,7 +16,6 @@ import {
 import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
 
-import { RecordToggle } from "@/components/admin/record-toggle";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { AdminField } from "@/lib/admin/resources";
@@ -603,6 +602,12 @@ export function AdminRecordForm({
   const [changedFields, setChangedFields] = useState<Record<string, boolean>>({});
   const hasChanges = Object.values(changedFields).some(Boolean);
   const [state, formAction] = useActionState<ActionState, FormData>(action, null);
+  const toggleChecked =
+    mode === "edit" && resource.toggleField && record
+      ? resource.toggleField.trueValue !== undefined
+        ? record[resource.toggleField.key] === resource.toggleField.trueValue
+        : Boolean(record[resource.toggleField.key])
+      : false;
 
   useEffect(() => {
     if (!state) return;
@@ -685,20 +690,49 @@ export function AdminRecordForm({
           <FormSubmitButton disabled={!hasChanges} mode={mode} />
 
           <div className="flex items-center gap-3">
-            {mode === "edit" && resource.toggleField && record ? (
+            {mode === "edit" && resource.toggleField ? (
               <div className="flex items-center gap-2 text-sm">
                 <span className="font-medium text-muted-foreground">
                   {resource.toggleField.label}
                 </span>
-                <RecordToggle
-                  checked={
-                    resource.toggleField.trueValue !== undefined
-                      ? record[resource.toggleField.key] === resource.toggleField.trueValue
-                      : Boolean(record[resource.toggleField.key])
-                  }
-                  collection={resource.slug}
-                  recordId={String(record.id)}
-                />
+                <button
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 ${
+                    toggleChecked ? "bg-green-500" : "bg-input"
+                  }`}
+                  onClick={() => {
+                    const form = document.getElementById(formId) as HTMLFormElement | null;
+                    if (!form) return;
+                    const field = form.querySelector<HTMLElement>(
+                      `[name="${resource.toggleField?.key}"]`,
+                    );
+                    if (!field) return;
+
+                    if (
+                      resource.toggleField?.trueValue !== undefined &&
+                      field instanceof HTMLSelectElement
+                    ) {
+                      field.value =
+                        field.value === resource.toggleField.trueValue
+                          ? resource.toggleField.falseValue!
+                          : resource.toggleField.trueValue;
+                    } else if (field instanceof HTMLInputElement && field.type === "checkbox") {
+                      field.checked = !field.checked;
+                    } else {
+                      return;
+                    }
+
+                    field.dispatchEvent(new Event("change", { bubbles: true }));
+                  }}
+                  role="switch"
+                  type="button"
+                  aria-checked={toggleChecked}
+                >
+                  <span
+                    className={`pointer-events-none inline-block size-3.5 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ease-in-out ${
+                      toggleChecked ? "translate-x-3.5" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
               </div>
             ) : null}
 
