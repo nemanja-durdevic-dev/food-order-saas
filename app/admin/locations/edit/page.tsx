@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAdminResource } from "@/lib/admin/resources";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { createClient } from "@/lib/supabase-server";
+import { getAdminClient } from "@/lib/admin/admin-client";
 import { AdminRecordForm } from "../../_components/admin-record-form";
 import { AdminShell } from "../../_components/admin-shell";
 import { LocationHoursSection } from "@/components/admin/location-hours-section";
@@ -21,32 +22,13 @@ async function updateLocation(
 
   void state;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, restaurantId } = await getAdminClient();
 
-  if (!user) {
-    return { error: "Not authenticated." };
-  }
-
-  const { data: membership } = await supabaseAdmin
-    .from("restaurant_members")
-    .select("restaurant_id")
-    .eq("user_id", user.id)
-    .in("role", ["admin", "owner"])
-    .limit(1)
-    .maybeSingle();
-
-  if (!membership) {
-    return { error: "Not authorized." };
-  }
-
-  const { data: location } = await supabaseAdmin
+  const { data: location } = await supabase
     .from("locations")
     .select("id")
     .eq("id", locationId)
-    .eq("restaurant_id", membership.restaurant_id)
+    .eq("restaurant_id", restaurantId)
     .maybeSingle();
 
   if (!location) {
@@ -76,7 +58,7 @@ async function updateLocation(
 
   if (file instanceof File && file.size > 0) {
     const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-    const path = `${membership.restaurant_id}/menu-items/${crypto.randomUUID()}.${extension}`;
+    const path = `${restaurantId}/menu-items/${crypto.randomUUID()}.${extension}`;
     const { error: uploadError } = await supabaseAdmin.storage
       .from("menu-item-images")
       .upload(path, file, { upsert: false });
@@ -92,10 +74,11 @@ async function updateLocation(
     payload.image_url = existingUrl || null;
   }
 
-  const { error: updateError } = await supabaseAdmin
+  const { error: updateError } = await supabase
     .from("locations")
     .update(payload)
-    .eq("id", locationId);
+    .eq("id", locationId)
+    .eq("restaurant_id", restaurantId);
 
   if (updateError) {
     return { error: updateError.message };
@@ -106,7 +89,7 @@ async function updateLocation(
     const openTime = String(formData.get(`day_${day}_open`) ?? "");
     const closeTime = String(formData.get(`day_${day}_close`) ?? "");
 
-    const { error: hoursError } = await supabaseAdmin.from("location_hours").upsert(
+    const { error: hoursError } = await supabase.from("location_hours").upsert(
       {
         location_id: locationId,
         day,

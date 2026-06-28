@@ -11,11 +11,11 @@ create policy "Menu items are readable by public (available) and admins (all)"
   for select
   using (
     is_available = true
-    or restaurant_id in (
+    or (auth.role() = 'authenticated' and restaurant_id in (
       select restaurant_id
       from public.restaurant_members
       where user_id = auth.uid() and role in ('admin', 'owner')
-    )
+    ))
   );
 
 drop policy if exists "Available menu item locations are publicly readable" on public.menu_item_locations;
@@ -25,11 +25,11 @@ create policy "Menu item locations are readable by public (available) and admins
   for select
   using (
     is_available = true
-    or restaurant_id in (
+    or (auth.role() = 'authenticated' and restaurant_id in (
       select restaurant_id
       from public.restaurant_members
       where user_id = auth.uid() and role in ('admin', 'owner')
-    )
+    ))
   );
 
 drop policy if exists "Active restaurants are publicly readable" on public.restaurants;
@@ -39,11 +39,11 @@ create policy "Restaurants are readable by public (active) and admins (all)"
   for select
   using (
     status = 'active'
-    or id in (
+    or (auth.role() = 'authenticated' and id in (
       select restaurant_id
       from public.restaurant_members
       where user_id = auth.uid() and role in ('admin', 'owner')
-    )
+    ))
   );
 
 -- ── 2. Admin write policies ──
