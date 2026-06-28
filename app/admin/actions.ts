@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getAdminResource, type AdminField } from "@/lib/admin/resources";
-import { buildMenuPublicationSnapshot } from "@/lib/admin/menu-publications";
+import {
+  buildMenuPublicationSnapshot,
+  type MenuPublicationSnapshot,
+} from "@/lib/admin/menu-publications";
+import { computeMenuDiff, type MenuChange } from "@/lib/admin/menu-diff";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { createClient } from "@/lib/supabase-server";
 
@@ -770,4 +774,50 @@ export async function toggleLocationStatus(formData: FormData) {
   }
 
   revalidatePath("/admin");
+}
+
+export async function getMenuChanges(): Promise<MenuChange[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return [];
+  }
+
+  const { data: membership } = await supabase
+    .from("restaurant_members")
+    .select("restaurant_id")
+    .eq("user_id", user.id)
+    .in("role", ["admin", "owner"])
+    .limit(1)
+    .maybeSingle();
+
+  if (!membership) {
+    return [];
+  }
+
+  const { data: lastPublication } = await supabaseAdmin
+    .from("menu_publications")
+    .select("snapshot")
+    .eq("restaurant_id", membership.restaurant_id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!lastPublication) {
+    return [];
+  }
+
+  const snapshot = lastPublication.snapshot as unknown as MenuPublicationSnapshot;
+  const publishedCategories = snapshot.categoriesByLocale["en"] ?? [];
+
+  const currentSnapshot = await buildMenuPublicationSnapshot(
+    supabaseAdmin,
+    membership.restaurant_id,
+  );
+  const currentCategories = currentSnapshot.categoriesByLocale["en"] ?? [];
+
+  return computeMenuDiff(publishedCategories, currentCategories);
 }

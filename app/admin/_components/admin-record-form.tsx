@@ -595,7 +595,7 @@ export function AdminRecordForm({
   const initialValues = useMemo(() => getInitialFieldValues(fields, record), [fields, record]);
   const [changedFields, setChangedFields] = useState<Record<string, boolean>>({});
   const hasChanges = Object.values(changedFields).some(Boolean);
-  const [state, formAction] = useActionState<ActionState>(action, null);
+  const [state, formAction] = useActionState<ActionState, FormData>(action, null);
 
   useEffect(() => {
     if (!state) return;
