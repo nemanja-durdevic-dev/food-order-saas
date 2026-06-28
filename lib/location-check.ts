@@ -12,10 +12,17 @@ type HoursOverride = {
   close_time: string | null;
 };
 
+type LocationHoursRow = {
+  day: number;
+  open_time: string | null;
+  close_time: string | null;
+  is_closed: boolean;
+};
+
 type LocationRow = {
   is_open: boolean;
-  opening_hours: OpeningHour[] | null;
   restaurant_id: string;
+  location_hours: LocationHoursRow[] | null;
 };
 
 function parseMinutes(time: string): number {
@@ -100,7 +107,10 @@ export async function assertLocationOpen(params: {
 }): Promise<{ allowed: false; error: string } | { allowed: true; restaurantId: string }> {
   const { data: rawLocation } = await params.supabaseAdmin
     .from("locations")
-    .select("is_open, opening_hours, restaurant_id")
+    .select(
+      `is_open, restaurant_id,
+       location_hours (day, open_time, close_time, is_closed)`,
+    )
     .eq("id", params.locationId)
     .maybeSingle();
 
@@ -114,12 +124,20 @@ export async function assertLocationOpen(params: {
     return { allowed: false, error: "This location is currently closed" };
   }
 
-  if (!location.opening_hours || location.opening_hours.length === 0) {
+  const locationHours: OpeningHour[] =
+    location.location_hours?.map((h) => ({
+      day: h.day,
+      open: h.open_time?.slice(0, 5),
+      close: h.close_time?.slice(0, 5),
+      closed: h.is_closed || undefined,
+    })) ?? [];
+
+  if (locationHours.length === 0) {
     return { allowed: false, error: "Location has no configured opening hours" };
   }
 
   if (params.orderTiming === "asap") {
-    if (!isCurrentlyOpenForSchedule(location.opening_hours)) {
+    if (!isCurrentlyOpenForSchedule(locationHours)) {
       return { allowed: false, error: "This location is currently closed" };
     }
     return { allowed: true, restaurantId: location.restaurant_id };
@@ -138,14 +156,7 @@ export async function assertLocationOpen(params: {
 
   const overrides = (rawOverrides as HoursOverride[] | null) ?? [];
 
-  if (
-    !isOpenAtPreorderTime(
-      params.preorderDate,
-      params.preorderTime,
-      location.opening_hours,
-      overrides,
-    )
-  ) {
+  if (!isOpenAtPreorderTime(params.preorderDate, params.preorderTime, locationHours, overrides)) {
     return { allowed: false, error: "This location is closed at the selected time" };
   }
 

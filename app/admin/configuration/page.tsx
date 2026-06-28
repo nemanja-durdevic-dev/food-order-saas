@@ -89,7 +89,10 @@ export default async function AdminConfigurationPage() {
         .maybeSingle(),
       supabaseAdmin
         .from("locations")
-        .select("id, name, address, phone, is_open, opening_hours")
+        .select(
+          `id, name, address, phone, is_open,
+           location_hours (id)`,
+        )
         .eq("restaurant_id", membership.restaurant_id),
       supabaseAdmin
         .from("categories")
@@ -146,7 +149,9 @@ export default async function AdminConfigurationPage() {
 
   const hasLocation = locations.length > 0;
   const hasOpenLocation = locations.some((location) => location.is_open);
-  const hasLocationWithOpeningHours = locations.some((location) => location.opening_hours);
+  const hasLocationWithOpeningHours = locations.some(
+    (location) => Array.isArray(location.location_hours) && location.location_hours.length > 0,
+  );
   const locationsHaveContactDetails =
     hasLocation &&
     locations.every((location) => hasValue(location.address) && hasValue(location.phone));

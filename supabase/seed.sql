@@ -22,21 +22,57 @@ with restaurant as (
     status = excluded.status
   returning id
 )
-insert into public.locations (restaurant_id, name, address, phone, image_url, is_open, opening_hours)
-select restaurant.id, location.name, location.address, location.phone, location.image_url, location.is_open, location.opening_hours::jsonb
+insert into public.locations (restaurant_id, name, address, phone, image_url, is_open)
+select restaurant.id, location.name, location.address, location.phone, location.image_url, location.is_open
 from restaurant
 cross join (
   values
-    ('Main Pickup Counter', '123 Main Street', '+47 22 10 10 10', 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80', true, '[{"day":0,"open":"10:00","close":"21:00"},{"day":1,"open":"10:00","close":"21:00"},{"day":2,"open":"10:00","close":"21:00"},{"day":3,"open":"10:00","close":"21:00"},{"day":4,"open":"10:00","close":"22:00"},{"day":5,"open":"10:00","close":"22:00"},{"day":6,"open":"12:00","close":"20:00"}]'),
-    ('Harbor Pickup Window', '8 Dockside Lane', '+47 22 10 10 11', 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80', true, '[{"day":0,"open":"11:00","close":"19:00"},{"day":1,"open":"11:00","close":"19:00"},{"day":2,"open":"11:00","close":"19:00"},{"day":3,"open":"11:00","close":"19:00"},{"day":4,"open":"11:00","close":"19:00"},{"day":5,"open":"10:00","close":"20:00"},{"day":6,"open":"12:00","close":"18:00"}]'),
-    ('West Side Kitchen', '44 Market Road', '+47 22 10 10 12', 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=800&q=80', false, '[{"day":0,"open":"11:00","close":"20:00"},{"day":1,"open":"11:00","close":"20:00"},{"day":2,"open":"11:00","close":"20:00"},{"day":3,"open":"11:00","close":"20:00"},{"day":4,"open":"11:00","close":"20:00"},{"day":5,"open":"12:00","close":"18:00"},{"day":6,"open":"12:00","close":"18:00"}]')
-) as location(name, address, phone, image_url, is_open, opening_hours)
+    ('Main Pickup Counter', '123 Main Street', '+47 22 10 10 10', 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80', true),
+    ('Harbor Pickup Window', '8 Dockside Lane', '+47 22 10 10 11', 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80', true),
+    ('West Side Kitchen', '44 Market Road', '+47 22 10 10 12', 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=800&q=80', false)
+) as location(name, address, phone, image_url, is_open)
 on conflict (restaurant_id, name) do update set
   address = excluded.address,
   phone = excluded.phone,
   image_url = excluded.image_url,
-  is_open = excluded.is_open,
-  opening_hours = excluded.opening_hours;
+  is_open = excluded.is_open;
+
+with restaurant as (
+  select id from public.restaurants where slug = 'burger-house'
+)
+insert into public.location_hours (location_id, day, open_time, close_time, is_closed)
+select locations.id, hours.day, hours.open_time, hours.close_time, hours.is_closed
+from restaurant
+cross join public.locations on locations.restaurant_id = restaurant.id
+cross join (
+  values
+    ('Main Pickup Counter', 0, '10:00'::time, '21:00'::time, false),
+    ('Main Pickup Counter', 1, '10:00'::time, '21:00'::time, false),
+    ('Main Pickup Counter', 2, '10:00'::time, '21:00'::time, false),
+    ('Main Pickup Counter', 3, '10:00'::time, '21:00'::time, false),
+    ('Main Pickup Counter', 4, '10:00'::time, '22:00'::time, false),
+    ('Main Pickup Counter', 5, '10:00'::time, '22:00'::time, false),
+    ('Main Pickup Counter', 6, '12:00'::time, '20:00'::time, false),
+    ('Harbor Pickup Window', 0, '11:00'::time, '19:00'::time, false),
+    ('Harbor Pickup Window', 1, '11:00'::time, '19:00'::time, false),
+    ('Harbor Pickup Window', 2, '11:00'::time, '19:00'::time, false),
+    ('Harbor Pickup Window', 3, '11:00'::time, '19:00'::time, false),
+    ('Harbor Pickup Window', 4, '11:00'::time, '19:00'::time, false),
+    ('Harbor Pickup Window', 5, '10:00'::time, '20:00'::time, false),
+    ('Harbor Pickup Window', 6, '12:00'::time, '18:00'::time, false),
+    ('West Side Kitchen', 0, '11:00'::time, '20:00'::time, false),
+    ('West Side Kitchen', 1, '11:00'::time, '20:00'::time, false),
+    ('West Side Kitchen', 2, '11:00'::time, '20:00'::time, false),
+    ('West Side Kitchen', 3, '11:00'::time, '20:00'::time, false),
+    ('West Side Kitchen', 4, '11:00'::time, '20:00'::time, false),
+    ('West Side Kitchen', 5, '12:00'::time, '18:00'::time, false),
+    ('West Side Kitchen', 6, '12:00'::time, '18:00'::time, false)
+) as hours(location_name, day, open_time, close_time, is_closed)
+where locations.name = hours.location_name
+on conflict (location_id, day) do update set
+  open_time = excluded.open_time,
+  close_time = excluded.close_time,
+  is_closed = excluded.is_closed;
 
 with restaurant as (
   insert into public.restaurants (name, slug, description, brand_color, status)

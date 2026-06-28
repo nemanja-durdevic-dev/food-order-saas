@@ -132,10 +132,33 @@ export default async function RestaurantOrderPage({ params }: Props) {
 
   const locationsResult = await supabase
     .from("locations")
-    .select("id, name, address, phone, image_url, is_open, opening_hours")
+    .select(
+      `id, name, address, phone, image_url, is_open,
+       location_hours (day, open_time, close_time, is_closed)`,
+    )
     .eq("restaurant_id", restaurantId)
     .order("name", { ascending: true });
 
+  const rawLocations = (locationsResult.data ?? []) as unknown as Array<
+    Record<string, unknown> & {
+      location_hours?: Array<{
+        day: number;
+        open_time: string | null;
+        close_time: string | null;
+        is_closed: boolean;
+      }>;
+    }
+  >;
+  const locations = rawLocations.map(({ location_hours, ...loc }) => ({
+    ...loc,
+    opening_hours:
+      location_hours?.map((h) => ({
+        day: h.day,
+        open: h.open_time?.slice(0, 5),
+        close: h.close_time?.slice(0, 5),
+        closed: h.is_closed || undefined,
+      })) ?? [],
+  }));
   const locationIds = (locationsResult.data ?? []).map((l) => l.id);
 
   const [
@@ -236,7 +259,6 @@ export default async function RestaurantOrderPage({ params }: Props) {
 
     return availableLocationIds;
   }, new Map<string, string[]>());
-  const locations = locationsResult.data ?? [];
   const menuItems = ((menuItemsResult?.data ?? []) as MenuItemRow[]).map((item) => ({
     ...item,
     name: item[`name_${locale}` as keyof MenuItemRow] ?? item.name,
