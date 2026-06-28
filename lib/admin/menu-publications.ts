@@ -75,6 +75,16 @@ export type MenuPublicationSnapshot = {
   allAllergensByLocale: Record<Locale, Array<{ id: string; name: string }>>;
   categoriesByLocale: Record<Locale, MenuCategory[]>;
   publishedAt: string;
+  rawData?: {
+    categories: Record<string, unknown>[];
+    subcategories: Record<string, unknown>[];
+    menu_items: Record<string, unknown>[];
+    menu_item_locations: Record<string, unknown>[];
+    menu_item_add_on_options: Record<string, unknown>[];
+    menu_item_ingredients: Record<string, unknown>[];
+    menu_item_allergens: Record<string, unknown>[];
+    category_locations: Record<string, unknown>[];
+  };
 };
 
 const locales: Locale[] = ["en", "no", "sv", "da"];
@@ -113,6 +123,14 @@ export async function buildMenuPublicationSnapshot(
     allergensResult,
     addOnsResult,
     allAllergensResult,
+    rawCategoriesResult,
+    rawSubcategoriesResult,
+    rawMenuItemsResult,
+    rawItemLocationsResult,
+    rawItemAddOnsResult,
+    rawItemIngredientsResult,
+    rawItemAllergensResult,
+    rawCategoryLocationsResult,
   ] = await Promise.all([
     supabase
       .from("categories")
@@ -163,6 +181,14 @@ export async function buildMenuPublicationSnapshot(
     supabase.from("allergens").select("id, name, name_no, name_sv, name_da").order("name", {
       ascending: true,
     }),
+    supabase.from("categories").select("*").eq("restaurant_id", restaurantId),
+    supabase.from("subcategories").select("*").eq("restaurant_id", restaurantId),
+    supabase.from("menu_items").select("*").eq("restaurant_id", restaurantId),
+    supabase.from("menu_item_locations").select("*").eq("restaurant_id", restaurantId),
+    supabase.from("menu_item_add_on_options").select("*").eq("restaurant_id", restaurantId),
+    supabase.from("menu_item_ingredients").select("*").eq("restaurant_id", restaurantId),
+    supabase.from("menu_item_allergens").select("*").eq("restaurant_id", restaurantId),
+    supabase.from("category_locations").select("*").eq("restaurant_id", restaurantId),
   ]);
 
   const error =
@@ -174,7 +200,15 @@ export async function buildMenuPublicationSnapshot(
     ingredientsResult.error?.message ??
     allergensResult.error?.message ??
     addOnsResult.error?.message ??
-    allAllergensResult.error?.message;
+    allAllergensResult.error?.message ??
+    rawCategoriesResult.error?.message ??
+    rawSubcategoriesResult.error?.message ??
+    rawMenuItemsResult.error?.message ??
+    rawItemLocationsResult.error?.message ??
+    rawItemAddOnsResult.error?.message ??
+    rawItemIngredientsResult.error?.message ??
+    rawItemAllergensResult.error?.message ??
+    rawCategoryLocationsResult.error?.message;
 
   if (error) {
     throw new Error(error);
@@ -316,5 +350,15 @@ export async function buildMenuPublicationSnapshot(
     allAllergensByLocale,
     categoriesByLocale,
     publishedAt: new Date().toISOString(),
+    rawData: {
+      categories: (rawCategoriesResult.data ?? []) as Record<string, unknown>[],
+      subcategories: (rawSubcategoriesResult.data ?? []) as Record<string, unknown>[],
+      menu_items: (rawMenuItemsResult.data ?? []) as Record<string, unknown>[],
+      menu_item_locations: (rawItemLocationsResult.data ?? []) as Record<string, unknown>[],
+      menu_item_add_on_options: (rawItemAddOnsResult.data ?? []) as Record<string, unknown>[],
+      menu_item_ingredients: (rawItemIngredientsResult.data ?? []) as Record<string, unknown>[],
+      menu_item_allergens: (rawItemAllergensResult.data ?? []) as Record<string, unknown>[],
+      category_locations: (rawCategoryLocationsResult.data ?? []) as Record<string, unknown>[],
+    },
   };
 }

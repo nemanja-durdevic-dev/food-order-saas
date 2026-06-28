@@ -599,7 +599,19 @@ export function AdminRecordForm({
   resource,
 }: AdminRecordFormProps) {
   const formId = useId();
-  const initialValues = useMemo(() => getInitialFieldValues(fields, record), [fields, record]);
+  const initialValues = useMemo(() => {
+    const values = getInitialFieldValues(fields, record);
+    const toggle = resource.toggleField;
+    if (toggle) {
+      const { key, trueValue, falseValue } = toggle;
+      if (trueValue !== undefined) {
+        values[key] = record && record[key] === trueValue ? [trueValue] : [falseValue ?? ""];
+      } else {
+        values[key] = record && Boolean(record[key]) ? ["on"] : [];
+      }
+    }
+    return values;
+  }, [fields, record, resource.toggleField]);
   const [changedFields, setChangedFields] = useState<Record<string, boolean>>({});
   const hasChanges = Object.values(changedFields).some(Boolean);
   const [state, formAction] = useActionState<ActionState, FormData>(action, null);
@@ -787,9 +799,26 @@ export function AdminRecordForm({
           </div>
         </div>
 
-        {fields.map((field) =>
-          renderField(field, record, resource.slug, imageValues, updateChangedField),
-        )}
+        {fields
+          .filter((field) => field.key !== resource.toggleField?.key)
+          .map((field) =>
+            renderField(field, record, resource.slug, imageValues, updateChangedField),
+          )}
+        {resource.toggleField ? (
+          <input
+            type="checkbox"
+            name={resource.toggleField.key}
+            defaultChecked={
+              mode === "edit" && record
+                ? resource.toggleField.trueValue !== undefined
+                  ? record[resource.toggleField.key] === resource.toggleField.trueValue
+                  : Boolean(record[resource.toggleField.key])
+                : true
+            }
+            className="hidden"
+            aria-hidden="true"
+          />
+        ) : null}
         {children}
       </form>
     </div>

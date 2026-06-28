@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Home, LogOut, Menu, X } from "lucide-react";
+import { Eye, Home, LogOut, Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -123,6 +123,19 @@ export function AdminSidebar({ activeSlug, breadcrumbItems }: AdminSidebarProps)
             </div>
           ))}
         </nav>
+
+        <a
+          className={`mt-4 flex items-center gap-3 rounded-md py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ${
+            isCollapsed ? "justify-center px-2" : "px-3"
+          }`}
+          href="/admin/menu-preview"
+          onClick={onNavigate}
+          target="_blank"
+          title={isCollapsed ? "Preview" : undefined}
+        >
+          <Eye className="size-5 shrink-0" />
+          {!isCollapsed ? <span>Preview</span> : null}
+        </a>
 
         <button
           className={`mt-auto flex items-center gap-3 rounded-md py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-destructive ${

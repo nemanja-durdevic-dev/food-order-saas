@@ -1,7 +1,8 @@
-import { CircleMinus, CirclePlus, PencilLine } from "lucide-react";
+import { CircleMinus, CirclePlus, Eye, PencilLine, RotateCcw } from "lucide-react";
 
 import type { MenuChange } from "@/lib/admin/menu-diff";
-import { publishMenuChanges } from "@/app/admin/actions";
+import { discardUnpublishedChanges, publishMenuChanges } from "@/app/admin/actions";
+import { FormAction, PendingSubmitButton } from "./pending-submit-button";
 
 const CHANGE_ICON: Record<MenuChange["type"], typeof CirclePlus> = {
   category_added: CirclePlus,
@@ -44,14 +45,27 @@ export function MenuChanges({ changes }: { changes: MenuChange[] }) {
           <ChangeRow change={change} key={i} />
         ))}
       </ul>
-      <form action={publishMenuChanges}>
-        <button
-          className="mt-2 h-9 rounded-md bg-amber-950 px-3 text-sm font-medium text-white"
-          type="submit"
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <a
+          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-amber-300 bg-white px-3 text-sm font-medium text-amber-900 hover:bg-amber-50"
+          href="/admin/menu-preview"
+          target="_blank"
         >
-          Publish changes
-        </button>
-      </form>
+          <Eye className="size-4" />
+          Preview
+        </a>
+        <FormAction action={publishMenuChanges}>
+          <PendingSubmitButton className="h-9 rounded-md bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-800">
+            Publish changes
+          </PendingSubmitButton>
+        </FormAction>
+        <FormAction action={discardUnpublishedChanges}>
+          <PendingSubmitButton className="inline-flex h-9 items-center gap-1.5 rounded-md border border-red-200 bg-white px-3 text-sm font-medium text-red-700 hover:bg-red-50">
+            <RotateCcw className="size-4" />
+            Discard changes
+          </PendingSubmitButton>
+        </FormAction>
+      </div>
     </div>
   );
 }

@@ -674,7 +674,84 @@ export async function publishMenuChanges() {
     throw new Error(updateError.message);
   }
 
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/[restaurantSlug]/order", "page");
+  revalidatePath("/staff/order");
+}
+
+export async function discardUnpublishedChanges() {
+  const { supabase, restaurantId } = await getAdminClient();
+
+  const { data: lastPublication } = await supabase
+    .from("menu_publications")
+    .select("snapshot")
+    .eq("restaurant_id", restaurantId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!lastPublication) {
+    throw new Error("No published version to revert to.");
+  }
+
+  const snapshot = lastPublication.snapshot as unknown as MenuPublicationSnapshot;
+  const rawData = snapshot.rawData;
+
+  if (rawData) {
+    const tables = [
+      "menu_item_locations",
+      "menu_item_add_on_options",
+      "menu_item_ingredients",
+      "menu_item_allergens",
+      "category_locations",
+      "menu_items",
+      "subcategories",
+      "categories",
+    ] as const;
+
+    for (const table of tables) {
+      const { error } = await supabase
+        .from(table as never)
+        .delete()
+        .eq("restaurant_id", restaurantId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    }
+
+    const insertTables = [
+      ["categories", rawData.categories],
+      ["subcategories", rawData.subcategories],
+      ["menu_items", rawData.menu_items],
+      ["menu_item_locations", rawData.menu_item_locations],
+      ["menu_item_add_on_options", rawData.menu_item_add_on_options],
+      ["menu_item_ingredients", rawData.menu_item_ingredients],
+      ["menu_item_allergens", rawData.menu_item_allergens],
+      ["category_locations", rawData.category_locations],
+    ] as const;
+
+    for (const [table, rows] of insertTables) {
+      if (rows.length === 0) continue;
+
+      const { error } = await supabase.from(table as never).insert(rows);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("restaurants")
+    .update({ menu_dirty: false, menu_published_at: new Date().toISOString() })
+    .eq("id", restaurantId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/admin", "layout");
   revalidatePath("/[restaurantSlug]/order", "page");
   revalidatePath("/staff/order");
 }

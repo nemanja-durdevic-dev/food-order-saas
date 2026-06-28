@@ -227,6 +227,7 @@ export default async function AdminEditPage({ params, searchParams }: Props) {
       restaurantName={restaurant?.name}
     >
       <AdminRecordForm
+        key={restaurant?.menu_published_at ?? "new"}
         action={action}
         canCreate={Boolean(resource.createFields?.length)}
         deleteAction={deleteAction}

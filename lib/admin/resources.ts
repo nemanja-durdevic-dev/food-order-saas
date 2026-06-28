@@ -170,7 +170,6 @@ const menuItemFields: AdminField[] = [
     searchable: true,
     type: "multiselect",
   },
-  { key: "is_available", label: "Available", type: "boolean" },
 ];
 
 export const adminResources: AdminResource[] = [
@@ -322,7 +321,6 @@ export const adminResources: AdminResource[] = [
         ],
         required: true,
       },
-      { key: "is_open", label: "Open", type: "boolean" },
     ],
     formSelect:
       "id, restaurant_id, name, address, phone, image_url, currency, is_open, created_at, updated_at",
