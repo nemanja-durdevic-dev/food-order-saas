@@ -4,7 +4,7 @@ import type { AdminField } from "@/lib/admin/resources";
 import { getAdminResource } from "@/lib/admin/resources";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { createClient } from "@/lib/supabase-server";
-import { updateAdminRecord } from "../../actions";
+import { deleteAdminRecord, duplicateAdminRecord, updateAdminRecord } from "../../actions";
 import { AdminRecordForm } from "../../_components/admin-record-form";
 import { AdminShell } from "../../_components/admin-shell";
 
@@ -44,11 +44,43 @@ async function getAdminContext() {
   return { membership, restaurant };
 }
 
-async function withRelationOptions(fields: AdminField[], restaurantId: string) {
+async function withRelationOptions(
+  fields: AdminField[],
+  restaurantId: string,
+  record?: Record<string, unknown>,
+) {
   return Promise.all(
     fields.map(async (field) => {
       if (!field.relation) {
         return field;
+      }
+
+      if (field.searchable) {
+        const selectedIds = Array.isArray(record?.[field.key]) ? record[field.key].map(String) : [];
+
+        if (selectedIds.length === 0) {
+          return { ...field, options: [] };
+        }
+
+        let selectedQuery = supabaseAdmin
+          .from(field.relation.table)
+          .select(`id, ${field.relation.labelColumn}`)
+          .in("id", selectedIds);
+
+        if (field.relation.restaurantScoped !== false) {
+          selectedQuery = selectedQuery.eq("restaurant_id", restaurantId);
+        }
+
+        const { data } = await selectedQuery.order(field.relation.labelColumn, { ascending: true });
+        const relationRecords = (data ?? []) as unknown as Array<Record<string, unknown>>;
+
+        return {
+          ...field,
+          options: relationRecords.map((selectedRecord) => ({
+            label: String(selectedRecord[field.relation!.labelColumn] ?? "Untitled"),
+            value: String(selectedRecord.id),
+          })),
+        };
       }
 
       let query = supabaseAdmin
@@ -143,25 +175,45 @@ export default async function AdminEditPage({ params, searchParams }: Props) {
     notFound();
   }
 
-  const [fields, recordWithJoins] = await Promise.all([
-    withRelationOptions(resource.editFields, membership.restaurant_id),
-    withJoinValues(
-      record as unknown as Record<string, unknown>,
-      resource.editFields,
-      id,
-      membership.restaurant_id,
-    ),
-  ]);
+  const recordWithJoins = await withJoinValues(
+    record as unknown as Record<string, unknown>,
+    resource.editFields,
+    id,
+    membership.restaurant_id,
+  );
+  const fields = await withRelationOptions(
+    resource.editFields,
+    membership.restaurant_id,
+    recordWithJoins,
+  );
   const action = updateAdminRecord.bind(null, resource.slug, id);
+  const duplicateAction = duplicateAdminRecord.bind(null, resource.slug, id);
+  const deleteAction = deleteAdminRecord.bind(null, resource.slug, id);
 
   return (
-    <AdminShell activeSlug={resource.slug} restaurantName={restaurant?.name}>
+    <AdminShell
+      activeSlug={resource.slug}
+      breadcrumbItems={[
+        { href: "/admin", label: "Admin" },
+        { href: `/admin/${resource.slug}`, label: resource.pluralLabel },
+        { label: "Edit" },
+      ]}
+      restaurantName={restaurant?.name}
+    >
       <AdminRecordForm
         action={action}
+        canCreate={Boolean(resource.createFields?.length)}
+        deleteAction={deleteAction}
+        duplicateAction={duplicateAction}
         fields={fields}
         mode="edit"
         record={recordWithJoins}
-        resource={resource}
+        resource={{
+          description: resource.description,
+          label: resource.label,
+          pluralLabel: resource.pluralLabel,
+          slug: resource.slug,
+        }}
       />
     </AdminShell>
   );

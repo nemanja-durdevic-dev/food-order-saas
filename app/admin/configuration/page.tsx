@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { createClient } from "@/lib/supabase-server";
+import { AdminShell } from "../_components/admin-shell";
 
 type CheckStatus = "complete" | "missing" | "warning";
 
@@ -111,24 +111,22 @@ export default async function AdminConfigurationPage() {
 
   if (!restaurant) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-10">
-        <Link
-          className="text-sm font-medium text-muted-foreground hover:text-foreground"
-          href="/admin"
-        >
-          Back to admin
-        </Link>
-        <h1 className="mt-6 text-3xl font-semibold tracking-tight">Restaurant not found</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The restaurant linked to your membership could not be loaded.
-        </p>
-        <div className="mt-4 space-y-1 border-l border-border pl-4 text-xs text-muted-foreground">
-          <p className="break-all">Membership restaurant ID: {membership.restaurant_id}</p>
-          {restaurantError ? (
-            <p className="text-destructive">Lookup error: {restaurantError.message}</p>
-          ) : null}
-        </div>
-      </main>
+      <AdminShell
+        breadcrumbItems={[{ href: "/admin", label: "Admin" }, { label: "Configuration" }]}
+      >
+        <section className="mx-auto max-w-3xl">
+          <h1 className="text-3xl font-semibold tracking-tight">Restaurant not found</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            The restaurant linked to your membership could not be loaded.
+          </p>
+          <div className="mt-4 space-y-1 border-l border-border pl-4 text-xs text-muted-foreground">
+            <p className="break-all">Membership restaurant ID: {membership.restaurant_id}</p>
+            {restaurantError ? (
+              <p className="text-destructive">Lookup error: {restaurantError.message}</p>
+            ) : null}
+          </div>
+        </section>
+      </AdminShell>
     );
   }
 
@@ -322,75 +320,74 @@ export default async function AdminConfigurationPage() {
   const readyForOrders = missingRequiredChecks.length === 0;
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
-      <div className="mb-8 flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link
-            className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            href="/admin"
+    <AdminShell
+      breadcrumbItems={[{ href: "/admin", label: "Admin" }, { label: "Configuration" }]}
+      restaurantName={restaurant.name}
+    >
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-8 flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">Configuration Status</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {restaurant.name} has completed {completedChecks.length} of {allChecks.length} setup
+              checks.
+            </p>
+          </div>
+          <div
+            className={`rounded-md border px-4 py-3 text-sm font-medium ${getStatusClass(readyForOrders ? "complete" : "missing")}`}
           >
-            Back to admin
-          </Link>
-          <h1 className="mt-4 text-3xl font-semibold tracking-tight">Configuration Status</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {restaurant.name} has completed {completedChecks.length} of {allChecks.length} setup
-            checks.
-          </p>
+            {readyForOrders ? "Ready for online orders" : "Not ready for online orders"}
+          </div>
         </div>
-        <div
-          className={`rounded-md border px-4 py-3 text-sm font-medium ${getStatusClass(readyForOrders ? "complete" : "missing")}`}
-        >
-          {readyForOrders ? "Ready for online orders" : "Not ready for online orders"}
-        </div>
-      </div>
 
-      {!readyForOrders ? (
-        <section className="mb-8 rounded-md border border-red-200 bg-red-50 p-5">
-          <h2 className="text-sm font-semibold text-red-900">Required before launch</h2>
-          <ul className="mt-3 space-y-2 text-sm text-red-800">
-            {missingRequiredChecks.map((check) => (
-              <li key={check.label}>{check.label}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+        {!readyForOrders ? (
+          <section className="mb-8 rounded-md border border-red-200 bg-red-50 p-5">
+            <h2 className="text-sm font-semibold text-red-900">Required before launch</h2>
+            <ul className="mt-3 space-y-2 text-sm text-red-800">
+              {missingRequiredChecks.map((check) => (
+                <li key={check.label}>{check.label}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
-      <div className="space-y-6">
-        {sections.map((section) => {
-          const completeCount = section.checks.filter(
-            (check) => check.status === "complete",
-          ).length;
+        <div className="space-y-6">
+          {sections.map((section) => {
+            const completeCount = section.checks.filter(
+              (check) => check.status === "complete",
+            ).length;
 
-          return (
-            <section className="rounded-md border border-border bg-card p-5" key={section.title}>
-              <div className="mb-4 flex items-center justify-between gap-4">
-                <h2 className="text-xl font-semibold">{section.title}</h2>
-                <span className="text-sm text-muted-foreground">
-                  {completeCount}/{section.checks.length} complete
-                </span>
-              </div>
-              <div className="space-y-3">
-                {section.checks.map((check) => (
-                  <div
-                    className="flex flex-col gap-3 rounded-md border border-border p-4 sm:flex-row sm:items-start sm:justify-between"
-                    key={check.label}
-                  >
-                    <div>
-                      <p className="text-sm font-medium">{check.label}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{check.description}</p>
-                    </div>
-                    <span
-                      className={`w-fit shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${getStatusClass(check.status)}`}
+            return (
+              <section className="rounded-md border border-border bg-card p-5" key={section.title}>
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <h2 className="text-xl font-semibold">{section.title}</h2>
+                  <span className="text-sm text-muted-foreground">
+                    {completeCount}/{section.checks.length} complete
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {section.checks.map((check) => (
+                    <div
+                      className="flex flex-col gap-3 rounded-md border border-border p-4 sm:flex-row sm:items-start sm:justify-between"
+                      key={check.label}
                     >
-                      {getStatusLabel(check.status)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          );
-        })}
+                      <div>
+                        <p className="text-sm font-medium">{check.label}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{check.description}</p>
+                      </div>
+                      <span
+                        className={`w-fit shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${getStatusClass(check.status)}`}
+                      >
+                        {getStatusLabel(check.status)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       </div>
-    </main>
+    </AdminShell>
   );
 }

@@ -216,20 +216,9 @@ from unavailable_items
 where menu_item_locations.menu_item_id = unavailable_items.menu_item_id
   and menu_item_locations.location_id = unavailable_items.location_id;
 
-with restaurant as (
-  insert into public.restaurants (name, slug, description, brand_color, status)
-  values ('Burger House', 'burger-house', 'Fresh burgers, bowls, sides, and pickup favorites.', '#f97316', 'active')
-  on conflict (slug) do update set
-    name = excluded.name,
-    description = excluded.description,
-    brand_color = excluded.brand_color,
-    status = excluded.status
-  returning id
-)
-insert into public.add_on_options (restaurant_id, name, name_no, name_sv, name_da, price, is_available, sort_order)
-select restaurant.id, option.name, option.name_no, option.name_sv, option.name_da, option.price, true, option.sort_order
-from restaurant
-cross join (
+insert into public.add_on_options (name, name_no, name_sv, name_da, price, is_available, sort_order)
+select option.name, option.name_no, option.name_sv, option.name_da, option.price, true, option.sort_order
+from (
   values
     ('Extra cheese', 'Ekstra ost', 'Extra ost', 'Ekstra ost', 15.00, 10),
     ('Bacon', 'Bacon', 'Bacon', 'Bacon', 25.00, 20),
@@ -239,7 +228,7 @@ cross join (
     ('Garlic dip', 'Hvitløksdip', 'Vitlöksdipp', 'Hvidløgsdip', 15.00, 60),
     ('Chipotle mayo', 'Chipotlemayo', 'Chipotlemajo', 'Chipotlemayo', 15.00, 70)
 ) as option(name, name_no, name_sv, name_da, price, sort_order)
-on conflict (restaurant_id, name) do update set
+on conflict (name) do update set
   name_no = excluded.name_no,
   name_sv = excluded.name_sv,
   name_da = excluded.name_da,
@@ -276,7 +265,7 @@ select restaurant.id, menu_items.id, add_on_options.id, item_add_ons.sort_order
 from restaurant
 join item_add_ons on true
 join public.menu_items on menu_items.restaurant_id = restaurant.id and menu_items.name = item_add_ons.item_name
-join public.add_on_options on add_on_options.restaurant_id = restaurant.id and add_on_options.name = item_add_ons.add_on_name
+join public.add_on_options on add_on_options.name = item_add_ons.add_on_name
 on conflict (menu_item_id, add_on_option_id) do update set
   restaurant_id = excluded.restaurant_id,
   sort_order = excluded.sort_order;

@@ -55,7 +55,7 @@ export default async function AdminPage() {
   const countsBySlug = new Map(resourceCounts);
 
   return (
-    <AdminShell restaurantName={restaurant?.name}>
+    <AdminShell breadcrumbItems={[{ label: "Admin" }]} restaurantName={restaurant?.name}>
       <section className="mb-8 border-b border-border pb-6">
         <p className="text-sm font-medium text-muted-foreground">Overview</p>
         <h2 className="mt-1 text-3xl font-semibold tracking-tight">

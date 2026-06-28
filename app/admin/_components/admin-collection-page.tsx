@@ -81,7 +81,11 @@ export async function AdminCollectionPage({ resource, searchParams }: AdminColle
 
   if (error) {
     return (
-      <AdminShell activeSlug={resource.slug} restaurantName={restaurant?.name}>
+      <AdminShell
+        activeSlug={resource.slug}
+        breadcrumbItems={[{ href: "/admin", label: "Admin" }, { label: resource.pluralLabel }]}
+        restaurantName={restaurant?.name}
+      >
         <section className="max-w-2xl rounded-lg border border-red-200 bg-red-50 p-5 text-red-900">
           <h2 className="text-lg font-semibold">Could not load {resource.pluralLabel}</h2>
           <p className="mt-2 text-sm">{error.message}</p>
@@ -91,7 +95,11 @@ export async function AdminCollectionPage({ resource, searchParams }: AdminColle
   }
 
   return (
-    <AdminShell activeSlug={resource.slug} restaurantName={restaurant?.name}>
+    <AdminShell
+      activeSlug={resource.slug}
+      breadcrumbItems={[{ href: "/admin", label: "Admin" }, { label: resource.pluralLabel }]}
+      restaurantName={restaurant?.name}
+    >
       <CollectionList
         count={count ?? 0}
         page={page}

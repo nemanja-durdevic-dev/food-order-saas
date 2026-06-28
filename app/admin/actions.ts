@@ -204,6 +204,29 @@ async function syncJoinFields(
   }
 }
 
+async function getAdminRecordForAction(collection: string, id: string) {
+  const membership = await requireAdminMembership();
+  const resource = getAdminResource(collection);
+
+  if (!resource) {
+    throw new Error("Unknown collection.");
+  }
+
+  let query = supabaseAdmin.from(resource.table).select("id").eq("id", id);
+
+  if (resource.restaurantScoped) {
+    query = query.eq("restaurant_id", membership.restaurant_id);
+  }
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error || !data) {
+    throw new Error(`${resource.label} was not found.`);
+  }
+
+  return { membership, resource };
+}
+
 export async function createAdminRecord(collection: string, formData: FormData) {
   const { membership, payload, relationshipValues, resource } = await buildAdminPayload(
     collection,
@@ -248,6 +271,109 @@ export async function updateAdminRecord(collection: string, id: string, formData
   }
 
   await syncJoinFields(collection, id, membership.restaurant_id, relationshipValues);
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/${resource.slug}`);
+  redirect(`/admin/${resource.slug}`);
+}
+
+export async function duplicateAdminRecord(collection: string, id: string, _formData?: FormData) {
+  void _formData;
+
+  const { membership, resource } = await getAdminRecordForAction(collection, id);
+  const fields = resource.createFields;
+
+  if (!fields?.length || !resource.formSelect) {
+    throw new Error(`${resource.label} cannot be duplicated.`);
+  }
+
+  let recordQuery = supabaseAdmin.from(resource.table).select(resource.formSelect).eq("id", id);
+
+  if (resource.restaurantScoped) {
+    recordQuery = recordQuery.eq("restaurant_id", membership.restaurant_id);
+  }
+
+  const { data: record, error: recordError } = await recordQuery.maybeSingle();
+
+  if (recordError || !record) {
+    throw new Error(`${resource.label} was not found.`);
+  }
+
+  const payload: Record<string, boolean | number | string | null> = {};
+  const relationshipValues: Record<string, string[]> = {};
+  const sourceRecord = record as Record<string, unknown>;
+
+  for (const field of fields) {
+    if (field.type === "multiselect") {
+      if (!field.join) {
+        continue;
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from(field.join.table)
+        .select(field.join.targetColumn)
+        .eq(field.join.sourceColumn, id)
+        .eq("restaurant_id", membership.restaurant_id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      relationshipValues[field.key] = ((data ?? []) as Array<Record<string, unknown>>).map((row) =>
+        String(row[field.join!.targetColumn]),
+      );
+      continue;
+    }
+
+    const value = sourceRecord[field.key];
+
+    if (field.key === "name" && typeof value === "string") {
+      payload[field.key] = `${value} Copy`;
+      continue;
+    }
+
+    if (value === undefined) {
+      continue;
+    }
+
+    payload[field.key] = value as boolean | number | string | null;
+  }
+
+  if (resource.restaurantScoped) {
+    payload.restaurant_id = membership.restaurant_id;
+  }
+
+  const { data: duplicatedRecord, error } = await supabaseAdmin
+    .from(resource.table)
+    .insert(payload)
+    .select("id")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await syncJoinFields(
+    collection,
+    String(duplicatedRecord.id),
+    membership.restaurant_id,
+    relationshipValues,
+  );
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/${resource.slug}`);
+  redirect(`/admin/${resource.slug}/edit?id=${encodeURIComponent(String(duplicatedRecord.id))}`);
+}
+
+export async function deleteAdminRecord(collection: string, id: string, _formData?: FormData) {
+  void _formData;
+
+  const { resource } = await getAdminRecordForAction(collection, id);
+  const { error } = await supabaseAdmin.from(resource.table).delete().eq("id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   revalidatePath("/admin");
   revalidatePath(`/admin/${resource.slug}`);

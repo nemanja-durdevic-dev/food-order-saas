@@ -7,13 +7,15 @@ import { useEffect, useState } from "react";
 
 import { adminResources } from "@/lib/admin/resources";
 import { createClient } from "@/lib/supabase-browser";
+import type { AdminBreadcrumbItem } from "./admin-breadcrumb";
+import { AdminBreadcrumb } from "./admin-breadcrumb";
 
 type AdminSidebarProps = {
   activeSlug?: string;
-  restaurantName?: string;
+  breadcrumbItems?: AdminBreadcrumbItem[];
 };
 
-export function AdminSidebar({ activeSlug, restaurantName }: AdminSidebarProps) {
+export function AdminSidebar({ activeSlug, breadcrumbItems }: AdminSidebarProps) {
   const pathname = usePathname();
   const supabase = createClient();
   const [expanded, setExpanded] = useState(false);
@@ -148,8 +150,12 @@ export function AdminSidebar({ activeSlug, restaurantName }: AdminSidebarProps) 
         >
           <Menu className="size-5" />
         </button>
-        <div className="ml-3 min-w-0">
-          <p className="truncate text-sm font-semibold">{restaurantName ?? "Control Panel"}</p>
+        <div className="ml-3 min-w-0 flex-1">
+          <AdminBreadcrumb
+            className="min-w-0 text-sm text-muted-foreground"
+            compact
+            items={breadcrumbItems}
+          />
         </div>
       </div>
 

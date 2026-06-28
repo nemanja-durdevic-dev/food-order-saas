@@ -51,6 +51,10 @@ async function withRelationOptions(fields: AdminField[], restaurantId: string) {
         return field;
       }
 
+      if (field.searchable) {
+        return { ...field, options: [] };
+      }
+
       let query = supabaseAdmin
         .from(field.relation.table)
         .select(`id, ${field.relation.labelColumn}`);
@@ -86,7 +90,15 @@ export default async function AdminCreatePage({ params }: Props) {
 
   if (!resource.createFields?.length) {
     return (
-      <AdminShell activeSlug={resource.slug} restaurantName={restaurant?.name}>
+      <AdminShell
+        activeSlug={resource.slug}
+        breadcrumbItems={[
+          { href: "/admin", label: "Admin" },
+          { href: `/admin/${resource.slug}`, label: resource.pluralLabel },
+          { label: "Create" },
+        ]}
+        restaurantName={restaurant?.name}
+      >
         <section className="max-w-2xl rounded-lg border border-border bg-card p-6">
           <p className="text-sm font-medium text-muted-foreground">{resource.pluralLabel}</p>
           <h2 className="mt-1 text-2xl font-semibold tracking-tight">
@@ -110,8 +122,26 @@ export default async function AdminCreatePage({ params }: Props) {
   const action = createAdminRecord.bind(null, resource.slug);
 
   return (
-    <AdminShell activeSlug={resource.slug} restaurantName={restaurant?.name}>
-      <AdminRecordForm action={action} fields={fields} mode="create" resource={resource} />
+    <AdminShell
+      activeSlug={resource.slug}
+      breadcrumbItems={[
+        { href: "/admin", label: "Admin" },
+        { href: `/admin/${resource.slug}`, label: resource.pluralLabel },
+        { label: "Create" },
+      ]}
+      restaurantName={restaurant?.name}
+    >
+      <AdminRecordForm
+        action={action}
+        fields={fields}
+        mode="create"
+        resource={{
+          description: resource.description,
+          label: resource.label,
+          pluralLabel: resource.pluralLabel,
+          slug: resource.slug,
+        }}
+      />
     </AdminShell>
   );
 }

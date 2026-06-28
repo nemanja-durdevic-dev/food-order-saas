@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { CirclePlus, ClipboardList, Leaf, ListTree, Tags, UtensilsCrossed } from "lucide-react";
+import { ClipboardList, ListTree, Tags, UtensilsCrossed } from "lucide-react";
 
 export type AdminColumn = {
   key: string;
@@ -28,6 +28,7 @@ export type AdminField = {
     restaurantScoped?: boolean;
     table: string;
   };
+  searchable?: boolean;
   required?: boolean;
 };
 
@@ -94,7 +95,8 @@ const menuItemFields: AdminField[] = [
       sourceColumn: "menu_item_id",
       targetColumn: "add_on_option_id",
     },
-    relation: { table: "add_on_options", labelColumn: "name" },
+    relation: { table: "add_on_options", labelColumn: "name", restaurantScoped: false },
+    searchable: true,
     type: "multiselect",
   },
   {
@@ -107,6 +109,7 @@ const menuItemFields: AdminField[] = [
       targetColumn: "ingredient_id",
     },
     relation: { table: "ingredients", labelColumn: "name", restaurantScoped: false },
+    searchable: true,
     type: "multiselect",
   },
   {
@@ -119,6 +122,7 @@ const menuItemFields: AdminField[] = [
       targetColumn: "allergen_id",
     },
     relation: { table: "allergens", labelColumn: "name", restaurantScoped: false },
+    searchable: true,
     type: "multiselect",
   },
   { key: "is_available", label: "Available", type: "boolean" },
@@ -145,7 +149,7 @@ export const adminResources: AdminResource[] = [
     sort: { column: "sort_order", ascending: true },
     createFields: localizedNameFields,
     editFields: localizedNameFields,
-    formSelect: "id, name, name_no, name_sv, name_da, sort_order",
+    formSelect: "id, name, name_no, name_sv, name_da, sort_order, created_at, updated_at",
   },
   {
     slug: "subcategories",
@@ -168,7 +172,8 @@ export const adminResources: AdminResource[] = [
     sort: { column: "sort_order", ascending: true },
     createFields: [categoryRelationField, ...localizedNameFields],
     editFields: [categoryRelationField, ...localizedNameFields],
-    formSelect: "id, category_id, name, name_no, name_sv, name_da, sort_order",
+    formSelect:
+      "id, category_id, name, name_no, name_sv, name_da, sort_order, created_at, updated_at",
   },
   {
     slug: "menu-items",
@@ -191,66 +196,7 @@ export const adminResources: AdminResource[] = [
     createFields: menuItemFields,
     editFields: menuItemFields,
     formSelect:
-      "id, category_id, subcategory_id, is_available, name, name_no, name_sv, name_da, description, description_no, description_sv, description_da, image_url, price",
-  },
-  {
-    slug: "ingredients",
-    label: "Ingredient",
-    pluralLabel: "Ingredients",
-    group: "Menu",
-    icon: Leaf,
-    table: "ingredients",
-    description: "Reusable ingredients that can be assigned to menu items.",
-    select: "id, name, name_no, updated_at",
-    columns: [
-      { key: "name", label: "Name" },
-      { key: "name_no", label: "Norwegian" },
-      { key: "updated_at", label: "Updated", type: "datetime" },
-    ],
-    searchColumns: ["name", "name_no", "name_sv", "name_da"],
-    sort: { column: "name", ascending: true },
-    createFields: localizedNameFields.slice(0, 4),
-    editFields: localizedNameFields.slice(0, 4),
-    formSelect: "id, name, name_no, name_sv, name_da",
-  },
-  {
-    slug: "add-ons",
-    label: "Add On",
-    pluralLabel: "Add Ons",
-    group: "Menu",
-    icon: CirclePlus,
-    table: "add_on_options",
-    description: "Optional extras customers can add to menu items.",
-    select: "id, name, name_no, price, is_available, sort_order, updated_at",
-    columns: [
-      { key: "name", label: "Name" },
-      { key: "price", label: "Price", type: "currency" },
-      { key: "is_available", label: "Available", type: "boolean" },
-      { key: "sort_order", label: "Sort" },
-      { key: "updated_at", label: "Updated", type: "datetime" },
-    ],
-    searchColumns: ["name", "name_no", "name_sv", "name_da"],
-    restaurantScoped: true,
-    sort: { column: "sort_order", ascending: true },
-    createFields: [
-      { key: "name", label: "Name", type: "text", required: true },
-      { key: "name_no", label: "Norwegian name", type: "text" },
-      { key: "name_sv", label: "Swedish name", type: "text" },
-      { key: "name_da", label: "Danish name", type: "text" },
-      { key: "price", label: "Price", type: "number", required: true },
-      { key: "is_available", label: "Available", type: "boolean" },
-      { key: "sort_order", label: "Sort order", type: "number", required: true },
-    ],
-    editFields: [
-      { key: "name", label: "Name", type: "text", required: true },
-      { key: "name_no", label: "Norwegian name", type: "text" },
-      { key: "name_sv", label: "Swedish name", type: "text" },
-      { key: "name_da", label: "Danish name", type: "text" },
-      { key: "price", label: "Price", type: "number", required: true },
-      { key: "is_available", label: "Available", type: "boolean" },
-      { key: "sort_order", label: "Sort order", type: "number", required: true },
-    ],
-    formSelect: "id, name, name_no, name_sv, name_da, price, is_available, sort_order",
+      "id, category_id, subcategory_id, is_available, name, name_no, name_sv, name_da, description, description_no, description_sv, description_da, image_url, price, created_at, updated_at",
   },
   {
     slug: "orders",
@@ -298,7 +244,7 @@ export const adminResources: AdminResource[] = [
         type: "select",
       },
     ],
-    formSelect: "id, status, payment_status, order_code",
+    formSelect: "id, status, payment_status, order_code, created_at, updated_at",
   },
 ];
 
