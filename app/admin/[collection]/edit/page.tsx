@@ -37,7 +37,7 @@ async function getAdminContext() {
 
   const { data: restaurant } = await supabaseAdmin
     .from("restaurants")
-    .select("name")
+    .select("name, menu_dirty, menu_published_at")
     .eq("id", membership.restaurant_id)
     .maybeSingle();
 
@@ -56,7 +56,8 @@ async function withRelationOptions(
       }
 
       if (field.searchable) {
-        const selectedIds = Array.isArray(record?.[field.key]) ? record[field.key].map(String) : [];
+        const selectedValue = record?.[field.key];
+        const selectedIds = Array.isArray(selectedValue) ? selectedValue.map(String) : [];
 
         if (selectedIds.length === 0) {
           return { ...field, options: [] };
@@ -118,11 +119,17 @@ async function withJoinValues(
         return null;
       }
 
-      const { data } = await supabaseAdmin
+      let joinQuery = supabaseAdmin
         .from(field.join.table)
         .select(field.join.targetColumn)
         .eq(field.join.sourceColumn, sourceId)
         .eq("restaurant_id", restaurantId);
+
+      for (const [column, value] of Object.entries(field.join.selectEquals ?? {})) {
+        joinQuery = value === null ? joinQuery.is(column, null) : joinQuery.eq(column, value);
+      }
+
+      const { data } = await joinQuery;
 
       return [
         field.key,
@@ -211,6 +218,8 @@ export default async function AdminEditPage({ params, searchParams }: Props) {
         { href: `/admin/${resource.slug}`, label: resource.pluralLabel },
         { label: "Edit" },
       ]}
+      menuDirty={Boolean(restaurant?.menu_dirty)}
+      menuPublishedAt={restaurant?.menu_published_at ?? null}
       restaurantName={restaurant?.name}
     >
       <AdminRecordForm

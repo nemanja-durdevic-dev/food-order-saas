@@ -1,11 +1,14 @@
 import type { AdminBreadcrumbItem } from "./admin-breadcrumb";
 import { AdminBreadcrumb } from "./admin-breadcrumb";
 import { AdminSidebar } from "./admin-sidebar";
+import { publishMenuChanges } from "../actions";
 
 type AdminShellProps = {
   activeSlug?: string;
   breadcrumbItems?: AdminBreadcrumbItem[];
   children: React.ReactNode;
+  menuDirty?: boolean;
+  menuPublishedAt?: string | null;
   restaurantName?: string;
 };
 
@@ -13,6 +16,8 @@ export function AdminShell({
   activeSlug,
   breadcrumbItems,
   children,
+  menuDirty = false,
+  menuPublishedAt,
   restaurantName,
 }: AdminShellProps) {
   const resolvedBreadcrumbItems = breadcrumbItems?.map((item, index) =>
@@ -27,6 +32,31 @@ export function AdminShell({
           className="mb-6 hidden text-sm text-muted-foreground lg:block"
           items={resolvedBreadcrumbItems}
         />
+        {menuDirty ? (
+          <section className="mb-6 flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold">Unpublished menu changes</p>
+              <p className="mt-1 text-sm text-amber-800">
+                Customers see the last published menu until you publish these admin changes.
+              </p>
+            </div>
+            <form action={publishMenuChanges}>
+              <button
+                className="h-9 rounded-md bg-amber-950 px-3 text-sm font-medium text-white"
+                type="submit"
+              >
+                Publish changes
+              </button>
+            </form>
+          </section>
+        ) : menuPublishedAt ? (
+          <p className="mb-6 text-xs text-muted-foreground">
+            Menu published{" "}
+            {new Intl.DateTimeFormat("en", { dateStyle: "short", timeStyle: "short" }).format(
+              new Date(menuPublishedAt),
+            )}
+          </p>
+        ) : null}
         {children}
       </main>
     </div>

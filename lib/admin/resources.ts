@@ -18,6 +18,9 @@ export type AdminField = {
   type: "boolean" | "image" | "multiselect" | "number" | "select" | "text" | "textarea";
   helpText?: string;
   join?: {
+    defaults?: Record<string, boolean | number | string | null>;
+    selectEquals?: Record<string, boolean | number | string | null>;
+    sortColumn?: string;
     table: string;
     sourceColumn: string;
     targetColumn: string;
@@ -58,6 +61,50 @@ const localizedNameFields: AdminField[] = [
   { key: "sort_order", label: "Sort order", type: "number", required: true },
 ];
 
+const categoryLocationField: AdminField = {
+  key: "location_ids",
+  label: "Locations",
+  helpText: "Locations where this category is shown.",
+  join: {
+    table: "category_locations",
+    sourceColumn: "category_id",
+    targetColumn: "location_id",
+  },
+  relation: { table: "locations", labelColumn: "name" },
+  required: true,
+  type: "multiselect",
+};
+
+const subcategoryLocationField: AdminField = {
+  key: "location_ids",
+  label: "Locations",
+  helpText: "Locations where this subcategory is shown.",
+  join: {
+    table: "subcategory_locations",
+    sourceColumn: "subcategory_id",
+    targetColumn: "location_id",
+  },
+  relation: { table: "locations", labelColumn: "name" },
+  required: true,
+  type: "multiselect",
+};
+
+const menuItemLocationField: AdminField = {
+  key: "location_ids",
+  label: "Locations",
+  helpText: "Locations where this item is available.",
+  join: {
+    defaults: { is_available: true },
+    selectEquals: { is_available: true },
+    table: "menu_item_locations",
+    sourceColumn: "menu_item_id",
+    targetColumn: "location_id",
+  },
+  relation: { table: "locations", labelColumn: "name" },
+  required: true,
+  type: "multiselect",
+};
+
 const categoryRelationField: AdminField = {
   key: "category_id",
   label: "Category",
@@ -86,6 +133,7 @@ const menuItemFields: AdminField[] = [
   { key: "price", label: "Price", type: "number", required: true },
   categoryRelationField,
   subcategoryRelationField,
+  menuItemLocationField,
   {
     key: "add_on_option_ids",
     label: "Add Ons",
@@ -94,6 +142,7 @@ const menuItemFields: AdminField[] = [
       table: "menu_item_add_on_options",
       sourceColumn: "menu_item_id",
       targetColumn: "add_on_option_id",
+      sortColumn: "sort_order",
     },
     relation: { table: "add_on_options", labelColumn: "name", restaurantScoped: false },
     searchable: true,
@@ -107,6 +156,7 @@ const menuItemFields: AdminField[] = [
       table: "menu_item_ingredients",
       sourceColumn: "menu_item_id",
       targetColumn: "ingredient_id",
+      sortColumn: "sort_order",
     },
     relation: { table: "ingredients", labelColumn: "name", restaurantScoped: false },
     searchable: true,
@@ -120,6 +170,7 @@ const menuItemFields: AdminField[] = [
       table: "menu_item_allergens",
       sourceColumn: "menu_item_id",
       targetColumn: "allergen_id",
+      sortColumn: "sort_order",
     },
     relation: { table: "allergens", labelColumn: "name", restaurantScoped: false },
     searchable: true,
@@ -147,8 +198,8 @@ export const adminResources: AdminResource[] = [
     searchColumns: ["name", "name_no", "name_sv", "name_da"],
     restaurantScoped: true,
     sort: { column: "sort_order", ascending: true },
-    createFields: localizedNameFields,
-    editFields: localizedNameFields,
+    createFields: [...localizedNameFields, categoryLocationField],
+    editFields: [...localizedNameFields, categoryLocationField],
     formSelect: "id, name, name_no, name_sv, name_da, sort_order, created_at, updated_at",
   },
   {
@@ -170,8 +221,8 @@ export const adminResources: AdminResource[] = [
     searchColumns: ["name", "name_no", "name_sv", "name_da"],
     restaurantScoped: true,
     sort: { column: "sort_order", ascending: true },
-    createFields: [categoryRelationField, ...localizedNameFields],
-    editFields: [categoryRelationField, ...localizedNameFields],
+    createFields: [categoryRelationField, ...localizedNameFields, subcategoryLocationField],
+    editFields: [categoryRelationField, ...localizedNameFields, subcategoryLocationField],
     formSelect:
       "id, category_id, name, name_no, name_sv, name_da, sort_order, created_at, updated_at",
   },

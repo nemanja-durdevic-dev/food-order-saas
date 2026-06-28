@@ -5,6 +5,23 @@ import { useEffect, useMemo, useState } from "react";
 import type { Location, MenuCategory, OrderMenuProps } from "./types";
 import { locationStorageKey, readStoredLocationId, writeStoredLocationId } from "./storage";
 
+function isCategoryAvailableAtLocation(category: MenuCategory, locationId: string) {
+  return (
+    category.availableLocationIds ??
+    category.menu_items.flatMap((item) => item.availableLocationIds)
+  ).includes(locationId);
+}
+
+function isSubcategoryAvailableAtLocation(
+  subcategory: MenuCategory["subcategories"][number],
+  locationId: string,
+) {
+  return (
+    subcategory.availableLocationIds ??
+    subcategory.menu_items.flatMap((item) => item.availableLocationIds)
+  ).includes(locationId);
+}
+
 function getCategoriesForLocation(
   categories: OrderMenuProps["categories"],
   location: Location | undefined,
@@ -14,12 +31,14 @@ function getCategoriesForLocation(
   }
 
   return categories
+    .filter((category) => isCategoryAvailableAtLocation(category, location.id))
     .map((category) => ({
       ...category,
       menu_items: category.menu_items.filter((item) =>
         item.availableLocationIds.includes(location.id),
       ),
       subcategories: category.subcategories
+        .filter((subcategory) => isSubcategoryAvailableAtLocation(subcategory, location.id))
         .map((subcategory) => ({
           ...subcategory,
           menu_items: subcategory.menu_items.filter((item) =>

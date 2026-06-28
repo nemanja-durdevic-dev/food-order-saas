@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 import { Ellipsis } from "lucide-react";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -566,6 +566,7 @@ export function AdminRecordForm({
   record,
   resource,
 }: AdminRecordFormProps) {
+  const formId = useId();
   const initialValues = useMemo(() => getInitialFieldValues(fields, record), [fields, record]);
   const [changedFields, setChangedFields] = useState<Record<string, boolean>>({});
   const hasChanges = Object.values(changedFields).some(Boolean);
@@ -632,7 +633,7 @@ export function AdminRecordForm({
         ) : null}
       </div>
 
-      <form action={action} className="w-full space-y-5" onChange={handleFieldChange}>
+      <form action={action} className="w-full space-y-5" id={formId} onChange={handleFieldChange}>
         <div className="sticky top-14 z-20 flex items-center justify-between border-b border-border bg-background py-4 lg:top-0">
           <Button disabled={!hasChanges} size="sm" type="submit">
             {mode === "create" ? "Create" : "Save"}
@@ -665,6 +666,7 @@ export function AdminRecordForm({
                 <button
                   className="flex h-9 w-full items-center rounded-md px-3 text-left text-sm font-medium hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-foreground"
                   disabled={!duplicateAction}
+                  form={formId}
                   formAction={duplicateAction}
                   type="submit"
                 >
@@ -673,6 +675,7 @@ export function AdminRecordForm({
                 <button
                   className="flex h-9 w-full items-center rounded-md px-3 text-left text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50 disabled:hover:bg-transparent"
                   disabled={!deleteAction}
+                  form={formId}
                   formAction={deleteAction}
                   type="submit"
                 >

@@ -51,6 +51,7 @@ const fries: MenuItem = {
 };
 
 const foodCategory: MenuCategory = {
+  availableLocationIds: ["loc-1"],
   id: "cat-burgers",
   name: "Burgers",
   menu_items: [burger, fries],
@@ -58,6 +59,7 @@ const foodCategory: MenuCategory = {
 };
 
 const drinkCategory: MenuCategory = {
+  availableLocationIds: ["loc-1"],
   id: "cat-drinks",
   name: "Drinks",
   menu_items: [cola],

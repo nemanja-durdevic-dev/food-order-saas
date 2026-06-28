@@ -37,7 +37,7 @@ async function getAdminContext() {
 
   const { data: restaurant } = await supabaseAdmin
     .from("restaurants")
-    .select("name")
+    .select("name, menu_dirty, menu_published_at")
     .eq("id", membership.restaurant_id)
     .maybeSingle();
 
@@ -97,6 +97,8 @@ export default async function AdminCreatePage({ params }: Props) {
           { href: `/admin/${resource.slug}`, label: resource.pluralLabel },
           { label: "Create" },
         ]}
+        menuDirty={Boolean(restaurant?.menu_dirty)}
+        menuPublishedAt={restaurant?.menu_published_at ?? null}
         restaurantName={restaurant?.name}
       >
         <section className="max-w-2xl rounded-lg border border-border bg-card p-6">
@@ -129,6 +131,8 @@ export default async function AdminCreatePage({ params }: Props) {
         { href: `/admin/${resource.slug}`, label: resource.pluralLabel },
         { label: "Create" },
       ]}
+      menuDirty={Boolean(restaurant?.menu_dirty)}
+      menuPublishedAt={restaurant?.menu_published_at ?? null}
       restaurantName={restaurant?.name}
     >
       <AdminRecordForm

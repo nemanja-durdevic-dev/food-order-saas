@@ -5,6 +5,7 @@ import type { MenuCategory } from "@/components/order-menu/types";
 import { OrderMenu } from "@/components/order-menu";
 import { supabase } from "@/lib/supabase";
 import { BRAND_NAME } from "@/lib/brand";
+import type { MenuPublicationSnapshot } from "@/lib/admin/menu-publications";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +102,16 @@ type MenuItemAddOnRow = {
   menu_item_id: string;
 };
 
+type CategoryAvailabilityRow = {
+  category_id: string;
+  location_id: string;
+};
+
+type SubcategoryAvailabilityRow = {
+  location_id: string;
+  subcategory_id: string;
+};
+
 function firstRelation<T>(relation: T | T[] | null) {
   return Array.isArray(relation) ? relation[0] : relation;
 }
@@ -135,6 +146,8 @@ export default async function RestaurantOrderPage({ params }: Props) {
   const [
     categoriesResult,
     subcategoriesResult,
+    categoryAvailabilityResult,
+    subcategoryAvailabilityResult,
     availabilityResult,
     menuItemsResult,
     ingredientsResult,
@@ -142,6 +155,7 @@ export default async function RestaurantOrderPage({ params }: Props) {
     addOnsResult,
     allAllergensResult,
     overridesResult,
+    publicationResult,
   ] = await Promise.all([
     supabase
       .from("categories")
@@ -155,6 +169,14 @@ export default async function RestaurantOrderPage({ params }: Props) {
       .eq("restaurant_id", restaurantId)
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true }),
+    supabase
+      .from("category_locations")
+      .select("category_id, location_id")
+      .eq("restaurant_id", restaurantId),
+    supabase
+      .from("subcategory_locations")
+      .select("subcategory_id, location_id")
+      .eq("restaurant_id", restaurantId),
     supabase
       .from("menu_item_locations")
       .select("menu_item_id, location_id")
@@ -196,6 +218,13 @@ export default async function RestaurantOrderPage({ params }: Props) {
       .in("location_id", locationIds.length > 0 ? locationIds : [""])
       .gte("date", todayStr)
       .lte("date", endStr),
+    supabase
+      .from("menu_publications")
+      .select("snapshot")
+      .eq("restaurant_id", restaurantId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const availableLocationIdsByItemId = (availabilityResult.data ?? []).reduce(
@@ -208,6 +237,24 @@ export default async function RestaurantOrderPage({ params }: Props) {
     },
     new Map<string, string[]>(),
   );
+  const availableLocationIdsByCategoryId = (
+    (categoryAvailabilityResult.data ?? []) as CategoryAvailabilityRow[]
+  ).reduce((availableLocationIds, item) => {
+    const locationIds = availableLocationIds.get(item.category_id) ?? [];
+    locationIds.push(item.location_id);
+    availableLocationIds.set(item.category_id, locationIds);
+
+    return availableLocationIds;
+  }, new Map<string, string[]>());
+  const availableLocationIdsBySubcategoryId = (
+    (subcategoryAvailabilityResult.data ?? []) as SubcategoryAvailabilityRow[]
+  ).reduce((availableLocationIds, item) => {
+    const locationIds = availableLocationIds.get(item.subcategory_id) ?? [];
+    locationIds.push(item.location_id);
+    availableLocationIds.set(item.subcategory_id, locationIds);
+
+    return availableLocationIds;
+  }, new Map<string, string[]>());
   const locations = locationsResult.data ?? [];
   const menuItems = ((menuItemsResult?.data ?? []) as MenuItemRow[]).map((item) => ({
     ...item,
@@ -288,7 +335,7 @@ export default async function RestaurantOrderPage({ params }: Props) {
     },
     new Map<string, SubcategoryRow[]>(),
   );
-  const categories = ((categoriesResult?.data ?? []) as CategoryRow[])
+  let categories = ((categoriesResult?.data ?? []) as CategoryRow[])
     .map((cat) => ({
       ...cat,
       name: cat[`name_${locale}` as keyof CategoryRow] ?? cat.name,
@@ -306,20 +353,33 @@ export default async function RestaurantOrderPage({ params }: Props) {
 
       return {
         ...category,
+        availableLocationIds: availableLocationIdsByCategoryId.get(category.id) ?? [],
         menu_items: categoryMenuItems,
         subcategories: (subcategoriesByCategoryId.get(category.id) ?? [])
           .map((subcategory) => ({
             ...subcategory,
+            availableLocationIds: availableLocationIdsBySubcategoryId.get(subcategory.id) ?? [],
             menu_items: categoryMenuItems.filter((item) => item.subcategory_id === subcategory.id),
           }))
           .filter((subcategory) => subcategory.menu_items.length > 0),
       };
     })
     .filter((category) => category.menu_items.length > 0) as MenuCategory[];
-  const allAllergens = ((allAllergensResult.data ?? []) as AllergenRow[]).map((allergen) => ({
+  let allAllergens = ((allAllergensResult.data ?? []) as AllergenRow[]).map((allergen) => ({
     id: allergen.id,
     name: allergen[`name_${locale}` as keyof AllergenRow] ?? allergen.name,
   }));
+  const publicationSnapshot = publicationResult.data?.snapshot as
+    | MenuPublicationSnapshot
+    | undefined;
+
+  if (publicationSnapshot) {
+    categories =
+      publicationSnapshot.categoriesByLocale[locale] ?? publicationSnapshot.categoriesByLocale.en;
+    allAllergens =
+      publicationSnapshot.allAllergensByLocale[locale] ??
+      publicationSnapshot.allAllergensByLocale.en;
+  }
   const overridesByLocationId = (overridesResult.data ?? []).reduce((acc, row) => {
     const locationOverrides = acc.get(row.location_id) ?? [];
     locationOverrides.push({

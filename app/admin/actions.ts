@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getAdminResource, type AdminField } from "@/lib/admin/resources";
+import { buildMenuPublicationSnapshot } from "@/lib/admin/menu-publications";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { createClient } from "@/lib/supabase-server";
 
@@ -300,6 +301,18 @@ async function removeAdminImages(publicUrls: Array<string | null | undefined>) {
   await Promise.all(publicUrls.map((publicUrl) => removeAdminImage(publicUrl)));
 }
 
+async function markMenuDirty(restaurantId: string) {
+  await supabaseAdmin.from("restaurants").update({ menu_dirty: true }).eq("id", restaurantId);
+}
+
+async function markMenuDirtyForResource(restaurantId: string, resourceSlug: string) {
+  if (!["categories", "menu-items", "subcategories"].includes(resourceSlug)) {
+    return;
+  }
+
+  await markMenuDirty(restaurantId);
+}
+
 async function syncJoinFields(
   collection: string,
   sourceId: string,
@@ -332,9 +345,10 @@ async function syncJoinFields(
 
     const rows = values.map((value, index) => ({
       restaurant_id: restaurantId,
+      ...(field.join!.defaults ?? {}),
       [field.join!.sourceColumn]: sourceId,
       [field.join!.targetColumn]: value,
-      sort_order: index,
+      ...(field.join!.sortColumn ? { [field.join!.sortColumn]: index } : {}),
     }));
 
     const { error: insertError } = await supabaseAdmin.from(field.join.table).insert(rows);
@@ -390,6 +404,7 @@ export async function createAdminRecord(collection: string, formData: FormData) 
     throw error;
   }
 
+  await markMenuDirtyForResource(membership.restaurant_id, resource.slug);
   revalidatePath("/admin");
   revalidatePath(`/admin/${resource.slug}`);
   redirect(`/admin/${resource.slug}`);
@@ -447,6 +462,7 @@ export async function updateAdminRecord(collection: string, id: string, formData
       .map((key) => (typeof existingImages[key] === "string" ? existingImages[key] : null)),
   );
 
+  await markMenuDirtyForResource(membership.restaurant_id, resource.slug);
   revalidatePath("/admin");
   revalidatePath(`/admin/${resource.slug}`);
   redirect(`/admin/${resource.slug}`);
@@ -477,7 +493,7 @@ export async function duplicateAdminRecord(collection: string, id: string, _form
   const payload: Record<string, boolean | number | string | null> = {};
   const relationshipValues: Record<string, string[]> = {};
   const copiedImageUrls: string[] = [];
-  const sourceRecord = record as Record<string, unknown>;
+  const sourceRecord = record as unknown as Record<string, unknown>;
 
   for (const field of fields) {
     if (field.type === "multiselect") {
@@ -485,19 +501,25 @@ export async function duplicateAdminRecord(collection: string, id: string, _form
         continue;
       }
 
-      const { data, error } = await supabaseAdmin
+      let joinQuery = supabaseAdmin
         .from(field.join.table)
         .select(field.join.targetColumn)
         .eq(field.join.sourceColumn, id)
         .eq("restaurant_id", membership.restaurant_id);
 
+      for (const [column, value] of Object.entries(field.join.selectEquals ?? {})) {
+        joinQuery = value === null ? joinQuery.is(column, null) : joinQuery.eq(column, value);
+      }
+
+      const { data, error } = await joinQuery;
+
       if (error) {
         throw new Error(error.message);
       }
 
-      relationshipValues[field.key] = ((data ?? []) as Array<Record<string, unknown>>).map((row) =>
-        String(row[field.join!.targetColumn]),
-      );
+      relationshipValues[field.key] = (
+        (data ?? []) as unknown as Array<Record<string, unknown>>
+      ).map((row) => String(row[field.join!.targetColumn]));
       continue;
     }
 
@@ -554,6 +576,7 @@ export async function duplicateAdminRecord(collection: string, id: string, _form
     throw error;
   }
 
+  await markMenuDirtyForResource(membership.restaurant_id, resource.slug);
   revalidatePath("/admin");
   revalidatePath(`/admin/${resource.slug}`);
   redirect(`/admin/${resource.slug}/edit?id=${encodeURIComponent(String(duplicatedRecord.id))}`);
@@ -600,9 +623,46 @@ export async function deleteAdminRecord(collection: string, id: string, _formDat
 
   await removeAdminImages(imageUrls);
 
+  await markMenuDirtyForResource(membership.restaurant_id, resource.slug);
   revalidatePath("/admin");
   revalidatePath(`/admin/${resource.slug}`);
   redirect(`/admin/${resource.slug}`);
+}
+
+export async function publishMenuChanges() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/admin/login");
+  }
+
+  const membership = await requireAdminMembership();
+  const snapshot = await buildMenuPublicationSnapshot(supabaseAdmin, membership.restaurant_id);
+  const { error: insertError } = await supabaseAdmin.from("menu_publications").insert({
+    published_by: user.id,
+    restaurant_id: membership.restaurant_id,
+    snapshot,
+  });
+
+  if (insertError) {
+    throw new Error(insertError.message);
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from("restaurants")
+    .update({ menu_dirty: false, menu_published_at: snapshot.publishedAt })
+    .eq("id", membership.restaurant_id);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/[restaurantSlug]/order", "page");
+  revalidatePath("/staff/order");
 }
 
 export async function signOut() {

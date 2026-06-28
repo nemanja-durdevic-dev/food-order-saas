@@ -34,7 +34,7 @@ export default async function AdminPage() {
   const [{ data: restaurant }, resourceCounts] = await Promise.all([
     supabaseAdmin
       .from("restaurants")
-      .select("name")
+      .select("name, menu_dirty, menu_published_at")
       .eq("id", membership.restaurant_id)
       .maybeSingle(),
     Promise.all(
@@ -55,7 +55,12 @@ export default async function AdminPage() {
   const countsBySlug = new Map(resourceCounts);
 
   return (
-    <AdminShell breadcrumbItems={[{ label: "Admin" }]} restaurantName={restaurant?.name}>
+    <AdminShell
+      breadcrumbItems={[{ label: "Admin" }]}
+      menuDirty={Boolean(restaurant?.menu_dirty)}
+      menuPublishedAt={restaurant?.menu_published_at ?? null}
+      restaurantName={restaurant?.name}
+    >
       <section className="mb-8 border-b border-border pb-6">
         <p className="text-sm font-medium text-muted-foreground">Overview</p>
         <h2 className="mt-1 text-3xl font-semibold tracking-tight">

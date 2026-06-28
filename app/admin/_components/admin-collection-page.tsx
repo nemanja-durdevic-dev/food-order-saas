@@ -74,7 +74,7 @@ export async function AdminCollectionPage({ resource, searchParams }: AdminColle
     recordsQuery,
     supabaseAdmin
       .from("restaurants")
-      .select("name")
+      .select("name, menu_dirty, menu_published_at")
       .eq("id", membership.restaurant_id)
       .maybeSingle(),
   ]);
@@ -84,6 +84,8 @@ export async function AdminCollectionPage({ resource, searchParams }: AdminColle
       <AdminShell
         activeSlug={resource.slug}
         breadcrumbItems={[{ href: "/admin", label: "Admin" }, { label: resource.pluralLabel }]}
+        menuDirty={Boolean(restaurant?.menu_dirty)}
+        menuPublishedAt={restaurant?.menu_published_at ?? null}
         restaurantName={restaurant?.name}
       >
         <section className="max-w-2xl rounded-lg border border-red-200 bg-red-50 p-5 text-red-900">
@@ -98,6 +100,8 @@ export async function AdminCollectionPage({ resource, searchParams }: AdminColle
     <AdminShell
       activeSlug={resource.slug}
       breadcrumbItems={[{ href: "/admin", label: "Admin" }, { label: resource.pluralLabel }]}
+      menuDirty={Boolean(restaurant?.menu_dirty)}
+      menuPublishedAt={restaurant?.menu_published_at ?? null}
       restaurantName={restaurant?.name}
     >
       <CollectionList
