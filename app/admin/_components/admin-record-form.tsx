@@ -178,6 +178,7 @@ function ImageUploadField({ field, onValueChange, savedUrl }: ImageUploadFieldPr
   const [cropZoom, setCropZoom] = useState(1);
   const [cropOffsetX, setCropOffsetX] = useState(0);
   const [cropOffsetY, setCropOffsetY] = useState(0);
+  const [selectedFileName, setSelectedFileName] = useState("");
   const previewUrl = objectUrl ?? savedUrl;
   const containedCropSize = cropImageSize
     ? getContainedSize(cropImageSize.width, cropImageSize.height)
@@ -267,6 +268,7 @@ function ImageUploadField({ field, onValueChange, savedUrl }: ImageUploadFieldPr
       setObjectUrl(nextPreviewUrl);
       setCropSource(null);
       setCropError(null);
+      setSelectedFileName(croppedFile.name);
       onValueChange(field.key, [croppedFile.name]);
     } catch (error) {
       setCropError(error instanceof Error ? error.message : "Could not crop image.");
@@ -280,30 +282,45 @@ function ImageUploadField({ field, onValueChange, savedUrl }: ImageUploadFieldPr
         {field.required ? <span className="text-destructive"> *</span> : null}
       </span>
 
-      <div className="mt-2 overflow-hidden rounded-md border border-border bg-muted">
+      <label
+        className="mt-2 flex cursor-pointer justify-center rounded-md border border-border bg-muted p-3"
+        htmlFor={`${field.key}-file`}
+      >
         {previewUrl ? (
           <img
             alt="Current image preview"
-            className="h-48 w-full object-cover sm:h-64"
+            className="aspect-square w-full max-w-sm cursor-pointer rounded-md object-cover"
             src={previewUrl}
           />
         ) : (
-          <div className="flex h-48 items-center justify-center px-4 text-sm text-muted-foreground sm:h-64">
-            No image selected
+          <div className="flex aspect-square w-full max-w-sm cursor-pointer items-center justify-center rounded-md border border-dashed border-border bg-background px-4 text-sm text-muted-foreground">
+            Upload image
           </div>
         )}
-      </div>
+      </label>
 
       <input name={field.key} type="hidden" value={savedUrl} />
       <input
         accept="image/*"
-        className="mt-3 block w-full text-sm file:mr-4 file:h-9 file:rounded-md file:border-0 file:bg-foreground file:px-3 file:text-sm file:font-medium file:text-background hover:file:bg-foreground/90"
+        className="sr-only"
+        id={`${field.key}-file`}
         name={`${field.key}_file`}
         onChange={handleImageChange}
         ref={inputRef}
         required={field.required && !savedUrl}
         type="file"
       />
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
+        <label
+          className="inline-flex h-9 cursor-pointer items-center rounded-md bg-foreground px-3 text-sm font-medium text-background hover:bg-foreground/90"
+          htmlFor={`${field.key}-file`}
+        >
+          Choose file
+        </label>
+        {selectedFileName ? (
+          <span className="text-sm text-muted-foreground">{selectedFileName}</span>
+        ) : null}
+      </div>
 
       {cropSource ? (
         <div
@@ -615,7 +632,7 @@ export function AdminRecordForm({
         ) : null}
       </div>
 
-      <form action={action} className="max-w-2xl space-y-5" onChange={handleFieldChange}>
+      <form action={action} className="w-full space-y-5" onChange={handleFieldChange}>
         <div className="sticky top-14 z-40 flex items-center justify-between border-b border-border bg-background py-4 lg:top-0">
           <Button disabled={!hasChanges} size="sm" type="submit">
             {mode === "create" ? "Create" : "Save"}
