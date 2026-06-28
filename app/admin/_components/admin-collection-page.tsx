@@ -56,7 +56,8 @@ export async function AdminCollectionPage({ resource, searchParams }: AdminColle
     .range(from, to);
 
   if (resource.restaurantScoped) {
-    recordsQuery = recordsQuery.eq("restaurant_id", membership.restaurant_id);
+    const column = resource.scopeColumn ?? "restaurant_id";
+    recordsQuery = recordsQuery.eq(column, membership.restaurant_id);
   }
 
   if (query && resource.searchColumns?.length) {

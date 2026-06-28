@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { ClipboardList, ListTree, Tags, UtensilsCrossed } from "lucide-react";
+import { ClipboardList, ListTree, MapPin, Store, Tags, UtensilsCrossed } from "lucide-react";
 
 export type AdminColumn = {
   key: string;
@@ -47,7 +47,9 @@ export type AdminResource = {
   columns: AdminColumn[];
   searchColumns?: string[];
   restaurantScoped?: boolean;
+  scopeColumn?: string;
   sort?: { column: string; ascending: boolean };
+  allowDelete?: boolean;
   createFields?: AdminField[];
   editFields?: AdminField[];
   formSelect?: string;
@@ -234,6 +236,71 @@ export const adminResources: AdminResource[] = [
     editFields: menuItemFields,
     formSelect:
       "id, category_id, subcategory_id, is_available, name, name_no, name_sv, name_da, description, description_no, description_sv, description_da, image_url, price, created_at, updated_at",
+  },
+  {
+    slug: "restaurants",
+    label: "Restaurant",
+    pluralLabel: "Restaurants",
+    group: "Settings",
+    icon: Store,
+    table: "restaurants",
+    description: "Restaurant profile, brand, and status settings.",
+    select: "id, name, slug, status, updated_at",
+    columns: [
+      { key: "name", label: "Name" },
+      { key: "slug", label: "Slug" },
+      { key: "status", label: "Status", type: "status" },
+      { key: "updated_at", label: "Updated", type: "datetime" },
+    ],
+    searchColumns: ["name", "slug", "description"],
+    restaurantScoped: true,
+    scopeColumn: "id",
+    sort: { column: "name", ascending: true },
+    editFields: [
+      { key: "name", label: "Name", type: "text", required: true },
+      { key: "description", label: "Description", type: "textarea" },
+      { key: "logo_url", label: "Logo URL", type: "text" },
+      { key: "brand_color", label: "Brand color", type: "text" },
+      {
+        key: "status",
+        label: "Status",
+        options: [
+          { label: "Active", value: "active" },
+          { label: "Inactive", value: "inactive" },
+        ],
+        required: true,
+        type: "select",
+      },
+    ],
+    formSelect: "id, name, description, logo_url, brand_color, status, created_at, updated_at",
+  },
+  {
+    slug: "locations",
+    label: "Location",
+    pluralLabel: "Locations",
+    group: "Settings",
+    icon: MapPin,
+    table: "locations",
+    description: "Restaurant locations, contact info, and open/close status.",
+    select: "id, name, address, is_open, updated_at",
+    columns: [
+      { key: "name", label: "Name" },
+      { key: "address", label: "Address" },
+      { key: "is_open", label: "Open", type: "boolean" },
+      { key: "updated_at", label: "Updated", type: "datetime" },
+    ],
+    searchColumns: ["name", "address"],
+    restaurantScoped: true,
+    sort: { column: "name", ascending: true },
+    editFields: [
+      { key: "name", label: "Name", type: "text", required: true },
+      { key: "address", label: "Address", type: "text" },
+      { key: "phone", label: "Phone", type: "text" },
+      { key: "image_url", label: "Image URL", type: "text" },
+      { key: "is_open", label: "Open", type: "boolean" },
+    ],
+    formSelect:
+      "id, restaurant_id, name, address, phone, image_url, is_open, created_at, updated_at",
   },
   {
     slug: "orders",

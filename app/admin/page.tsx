@@ -42,7 +42,8 @@ export default async function AdminPage() {
         let query = supabaseAdmin.from(resource.table).select("id", { count: "exact", head: true });
 
         if (resource.restaurantScoped) {
-          query = query.eq("restaurant_id", membership.restaurant_id);
+          const column = resource.scopeColumn ?? "restaurant_id";
+          query = query.eq(column, membership.restaurant_id);
         }
 
         const { count } = await query;

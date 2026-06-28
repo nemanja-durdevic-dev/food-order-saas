@@ -173,7 +173,8 @@ export default async function AdminEditPage({ params, searchParams }: Props) {
   let recordQuery = supabaseAdmin.from(resource.table).select(resource.formSelect).eq("id", id);
 
   if (resource.restaurantScoped) {
-    recordQuery = recordQuery.eq("restaurant_id", membership.restaurant_id);
+    const column = resource.scopeColumn ?? "restaurant_id";
+    recordQuery = recordQuery.eq(column, membership.restaurant_id);
   }
 
   const { data: record } = await recordQuery.maybeSingle();
@@ -207,8 +208,11 @@ export default async function AdminEditPage({ params, searchParams }: Props) {
     return values;
   }, {});
   const action = updateAdminRecord.bind(null, resource.slug, id);
-  const duplicateAction = duplicateAdminRecord.bind(null, resource.slug, id);
-  const deleteAction = deleteAdminRecord.bind(null, resource.slug, id);
+  const duplicateAction = resource.createFields?.length
+    ? duplicateAdminRecord.bind(null, resource.slug, id)
+    : undefined;
+  const deleteAction =
+    resource.allowDelete !== false ? deleteAdminRecord.bind(null, resource.slug, id) : undefined;
 
   return (
     <AdminShell
