@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { AdminColumn, AdminResource } from "@/lib/admin/resources";
+import { RecordToggle } from "@/components/admin/record-toggle";
 
 type AdminRecord = Record<string, unknown>;
 
@@ -68,6 +69,21 @@ function formatValue(record: AdminRecord, column: AdminColumn) {
   return String(value);
 }
 
+function isToggleChecked(record: AdminRecord, resource: AdminResource) {
+  if (!resource.toggleField) {
+    return false;
+  }
+
+  const value = record[resource.toggleField.key];
+  const { trueValue } = resource.toggleField;
+
+  if (trueValue !== undefined) {
+    return value === trueValue;
+  }
+
+  return Boolean(value);
+}
+
 export function CollectionList({
   count,
   page,
@@ -124,6 +140,9 @@ export function CollectionList({
                     {column.label}
                   </th>
                 ))}
+                {resource.toggleField ? (
+                  <th className="px-4 py-3 font-semibold text-right">Actions</th>
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -146,13 +165,22 @@ export function CollectionList({
                       )}
                     </td>
                   ))}
+                  {resource.toggleField ? (
+                    <td className="px-4 py-3 align-middle text-right">
+                      <RecordToggle
+                        checked={isToggleChecked(record, resource)}
+                        collection={resource.slug}
+                        recordId={String(record.id)}
+                      />
+                    </td>
+                  ) : null}
                 </tr>
               ))}
               {records.length === 0 ? (
                 <tr>
                   <td
                     className="px-4 py-10 text-center text-sm text-muted-foreground"
-                    colSpan={resource.columns.length}
+                    colSpan={resource.columns.length + (resource.toggleField ? 1 : 0)}
                   >
                     No {resource.pluralLabel.toLowerCase()} found.
                   </td>

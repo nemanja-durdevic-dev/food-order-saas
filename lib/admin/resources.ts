@@ -53,6 +53,12 @@ export type AdminResource = {
   createFields?: AdminField[];
   editFields?: AdminField[];
   formSelect?: string;
+  toggleField?: {
+    key: string;
+    label: string;
+    trueValue?: string;
+    falseValue?: string;
+  };
 };
 
 const localizedNameFields: AdminField[] = [
@@ -257,6 +263,7 @@ export const adminResources: AdminResource[] = [
     scopeColumn: "id",
     sort: { column: "name", ascending: true },
     allowDelete: false,
+    toggleField: { key: "status", label: "Active", trueValue: "active", falseValue: "inactive" },
     editFields: [
       { key: "name", label: "Name", type: "text", required: true },
       { key: "description", label: "Description", type: "textarea" },
@@ -295,6 +302,7 @@ export const adminResources: AdminResource[] = [
     restaurantScoped: true,
     sort: { column: "name", ascending: true },
     allowDelete: false,
+    toggleField: { key: "is_open", label: "Open" },
     editFields: [
       { key: "name", label: "Name", type: "text", required: true },
       { key: "address", label: "Address", type: "text" },
