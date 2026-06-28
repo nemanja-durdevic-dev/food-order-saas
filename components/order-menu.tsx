@@ -112,6 +112,7 @@ export function OrderMenu({
     : null;
 
   const cart = useCart(selectedCategories, selectedLocation);
+  const currency = selectedLocation?.currency ?? "NOK";
   const {
     cartItems,
     cartQuantity,
@@ -792,6 +793,7 @@ export function OrderMenu({
                 <CartPanel
                   cartItems={cartItems}
                   cartSubtotal={cartSubtotal}
+                  currency={currency}
                   decrementCartItem={decrementCartItem}
                   incrementCartItem={incrementCartItem}
                   isLocationClosed={isLocationEffectivelyClosed}
@@ -812,6 +814,7 @@ export function OrderMenu({
 
           {selectedItem && shouldShowOrderContent ? (
             <ItemDetailsDialog
+              currency={currency}
               decrementCartItem={decrementCartItem}
               drinkOptions={drinkOptions}
               editingCartKey={editingCartKey}
@@ -957,6 +960,7 @@ export function OrderMenu({
             <MenuCategoryList
               categories={filteredCategories}
               categoryRefs={categoryRefs}
+              currency={currency}
               getItemCartQuantity={getItemCartQuantity}
               hasBottomCartSpace={isCartButtonVisible}
               onOpenAllergens={openAllergens}

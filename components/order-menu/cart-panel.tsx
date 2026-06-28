@@ -48,6 +48,7 @@ function getOrderTimingOptions(t: ReturnType<typeof useTranslations>) {
 type CartPanelProps = {
   cartItems: CartItem[];
   cartSubtotal: number;
+  currency: string;
   decrementCartItem: (itemId: string) => void;
   incrementCartItem: (itemId: string) => void;
   isLocationClosed: boolean;
@@ -65,6 +66,7 @@ type CartPanelProps = {
 export function CartPanel({
   cartItems,
   cartSubtotal,
+  currency,
   decrementCartItem,
   incrementCartItem,
   isLocationClosed,
@@ -324,7 +326,7 @@ export function CartPanel({
                   <span className="mt-0.5 block text-xs font-medium text-muted-foreground">
                     {cartItems.length}{" "}
                     {cartItems.length === 1 ? t("common.item") : t("common.items")} ·{" "}
-                    {formatPrice(cartSubtotal)}
+                    {formatPrice(cartSubtotal, currency)}
                   </span>
                 </span>
                 <ChevronDown
@@ -340,7 +342,7 @@ export function CartPanel({
                   id={cartItemsSectionId}
                 >
                   {cartItems.map((item) => {
-                    const customizationLabels = getCartCustomizationLabels(item, t);
+                    const customizationLabels = getCartCustomizationLabels(item, t, currency);
 
                     return (
                       <div
@@ -385,7 +387,7 @@ export function CartPanel({
                         </div>
                         <div className="mt-2 flex items-center justify-between gap-3 px-4">
                           <p className="text-sm font-bold">
-                            {formatPrice(getPriceValue(item.price) * item.quantity)}
+                            {formatPrice(getPriceValue(item.price) * item.quantity, currency)}
                           </p>
                           <div
                             className="flex items-center rounded-md border border-border bg-white"
@@ -563,7 +565,7 @@ export function CartPanel({
             <div className="mt-3 border-t border-border pt-3">
               <div className="flex items-center justify-between gap-4 text-base font-semibold">
                 <span>{t("common.total")}</span>
-                <span>{formatPrice(cartSubtotal)}</span>
+                <span>{formatPrice(cartSubtotal, currency)}</span>
               </div>
             </div>
             <div className="mt-3 overflow-hidden rounded-md border border-border bg-card">
@@ -639,7 +641,7 @@ export function CartPanel({
               <>
                 <span>{t("common.checkout")}</span>
                 <span aria-hidden="true" className="h-5 w-px bg-primary-foreground" />
-                <span>{formatPrice(cartSubtotal)}</span>
+                <span>{formatPrice(cartSubtotal, currency)}</span>
               </>
             )}
           </Button>
@@ -653,7 +655,7 @@ export function CartPanel({
             <LogIn className="size-5" aria-hidden="true" />
             <span>{t("cart.log_in_to_order")}</span>
             <span aria-hidden="true" className="h-5 w-px bg-primary-foreground" />
-            <span>{formatPrice(cartSubtotal)}</span>
+            <span>{formatPrice(cartSubtotal, currency)}</span>
           </Button>
         )}
       </div>

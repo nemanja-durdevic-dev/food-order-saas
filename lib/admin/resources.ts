@@ -283,10 +283,11 @@ export const adminResources: AdminResource[] = [
     icon: MapPin,
     table: "locations",
     description: "Restaurant locations, contact info, and open/close status.",
-    select: "id, name, address, is_open, updated_at",
+    select: "id, name, address, currency, is_open, updated_at",
     columns: [
       { key: "name", label: "Name" },
       { key: "address", label: "Address" },
+      { key: "currency", label: "Currency", type: "currency" },
       { key: "is_open", label: "Open", type: "boolean" },
       { key: "updated_at", label: "Updated", type: "datetime" },
     ],
@@ -299,10 +300,23 @@ export const adminResources: AdminResource[] = [
       { key: "address", label: "Address", type: "text" },
       { key: "phone", label: "Phone", type: "text" },
       { key: "image_url", label: "Image", type: "image" },
+      {
+        key: "currency",
+        label: "Currency",
+        type: "select",
+        options: [
+          { label: "DKK (Danish Krone)", value: "DKK" },
+          { label: "EUR (Euro)", value: "EUR" },
+          { label: "ISK (Icelandic Króna)", value: "ISK" },
+          { label: "NOK (Norwegian Krone)", value: "NOK" },
+          { label: "SEK (Swedish Krona)", value: "SEK" },
+        ],
+        required: true,
+      },
       { key: "is_open", label: "Open", type: "boolean" },
     ],
     formSelect:
-      "id, restaurant_id, name, address, phone, image_url, is_open, created_at, updated_at",
+      "id, restaurant_id, name, address, phone, image_url, currency, is_open, created_at, updated_at",
   },
   {
     slug: "orders",

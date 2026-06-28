@@ -133,7 +133,7 @@ export default async function RestaurantOrderPage({ params }: Props) {
   const locationsResult = await supabase
     .from("locations")
     .select(
-      `id, name, address, phone, image_url, is_open,
+      `id, name, address, phone, image_url, currency, is_open,
        location_hours (day, open_time, close_time, is_closed)`,
     )
     .eq("restaurant_id", restaurantId)

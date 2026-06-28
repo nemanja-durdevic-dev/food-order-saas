@@ -53,6 +53,7 @@ export type CartItem = MenuItem & {
 
 export type Location = {
   address: string | null;
+  currency: string;
   id: string;
   image_url: string | null;
   is_open: boolean | null;

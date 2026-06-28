@@ -12,6 +12,7 @@ import { formatPrice } from "./utils";
 import { useTranslations } from "./locale-context";
 
 type ItemDetailsDialogProps = {
+  currency: string;
   decrementCartItem: (itemId: string) => void;
   drinkOptions: MenuItem[];
   editingCartKey: string | null;
@@ -39,6 +40,7 @@ type ItemDetailsDialogProps = {
 };
 
 export function ItemDetailsDialog({
+  currency,
   decrementCartItem,
   drinkOptions,
   editingCartKey,
@@ -87,7 +89,7 @@ export function ItemDetailsDialog({
               <h2 className="text-2xl font-black tracking-tight" id="item-dialog-title">
                 {selectedItem.name}
               </h2>
-              <p className="mt-2 text-xl font-black">{formatPrice(selectedItem.price)}</p>
+              <p className="mt-2 text-xl font-black">{formatPrice(selectedItem.price, currency)}</p>
             </div>
           </div>
           <div className="mt-4">
@@ -118,6 +120,7 @@ export function ItemDetailsDialog({
 
           {selectedItem.addOnOptions.length > 0 ? (
             <OptionList
+              currency={currency}
               description={t("item.add_extras_desc")}
               options={selectedItem.addOnOptions}
               selectedIds={selectedExtraIds}
@@ -129,6 +132,7 @@ export function ItemDetailsDialog({
 
           {drinkOptions.length > 0 ? (
             <OptionList
+              currency={currency}
               description={t("item.add_drinks_desc")}
               options={drinkOptions}
               selectedIds={selectedDrinkIds}
@@ -237,7 +241,7 @@ export function ItemDetailsDialog({
                   ? t("common.update")
                   : t("common.add")
                 : t("item.sold_out")}{" "}
-              · {formatPrice(selectedActionPrice)}
+              · {formatPrice(selectedActionPrice, currency)}
             </span>
           </Button>
         </div>
@@ -323,6 +327,7 @@ function RemoveIngredientsSection({
 }
 
 function OptionList({
+  currency,
   description,
   options,
   selectedIds,
@@ -330,6 +335,7 @@ function OptionList({
   title,
   toggleSelection,
 }: {
+  currency: string;
   description: string;
   options: Array<MenuItem | ModifierOption>;
   selectedIds: string[];
@@ -362,7 +368,7 @@ function OptionList({
                 <span className="min-w-0 font-semibold">{option.name}</span>
               </span>
               <span className="shrink-0 text-sm font-bold text-muted-foreground">
-                + {formatPrice(option.price)}
+                + {formatPrice(option.price, currency)}
               </span>
             </button>
           );

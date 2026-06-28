@@ -1,9 +1,29 @@
 import type { CartItem, MenuItem, ModifierOption } from "./types";
 
-export function formatPrice(price: number | string) {
+const CURRENCY_LOCALE: Record<string, string> = {
+  DKK: "da-DK",
+  EUR: "en-IE",
+  ISK: "is-IS",
+  NOK: "nb-NO",
+  SEK: "sv-SE",
+};
+
+export function formatPrice(price: number | string, currency = "NOK") {
   const value = typeof price === "number" ? price : Number(price);
-  if (Number.isNaN(value)) return "0 kr";
-  return `${value} kr`;
+  if (Number.isNaN(value)) {
+    return new Intl.NumberFormat(CURRENCY_LOCALE[currency] ?? "nb-NO", {
+      currency,
+      maximumFractionDigits: 0,
+      minimumFractionDigits: 0,
+      style: "currency",
+    }).format(0);
+  }
+  return new Intl.NumberFormat(CURRENCY_LOCALE[currency] ?? "nb-NO", {
+    currency,
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    style: "currency",
+  }).format(value);
 }
 
 export function getPriceValue(price: number | string) {
@@ -46,10 +66,11 @@ export function formatPhoneNumber(phone: string) {
 export function getCartCustomizationLabels(
   item: CartItem,
   t: (key: string, params?: Record<string, string | number>) => string,
+  currency = "NOK",
 ) {
   return [
     ...item.removedIngredients.map((ingredient) => `${t("item.no_prefix")} ${ingredient}`),
-    ...item.extraItems.map((extra) => `+ ${extra.name} (${formatPrice(extra.price)})`),
-    ...item.drinkItems.map((drink) => `+ ${drink.name} (${formatPrice(drink.price)})`),
+    ...item.extraItems.map((extra) => `+ ${extra.name} (${formatPrice(extra.price, currency)})`),
+    ...item.drinkItems.map((drink) => `+ ${drink.name} (${formatPrice(drink.price, currency)})`),
   ];
 }

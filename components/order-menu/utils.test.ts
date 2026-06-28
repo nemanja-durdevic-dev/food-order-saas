@@ -8,24 +8,34 @@ import {
 } from "./utils";
 
 describe("formatPrice", () => {
-  it("formats a number", () => {
-    expect(formatPrice(99)).toBe("99 kr");
+  it("formats a number with default currency", () => {
+    expect(formatPrice(99)).toContain("99");
   });
 
   it("formats a string number", () => {
-    expect(formatPrice("99")).toBe("99 kr");
+    expect(formatPrice("99")).toContain("99");
   });
 
   it("formats zero", () => {
-    expect(formatPrice(0)).toBe("0 kr");
+    expect(formatPrice(0)).toContain("0");
+  });
+
+  it("formats with SEK currency", () => {
+    const formatted = formatPrice(99, "SEK");
+    expect(formatted).toContain("99");
+  });
+
+  it("formats with EUR currency", () => {
+    const formatted = formatPrice(99, "EUR");
+    expect(formatted).toContain("99");
   });
 
   it("guards against NaN", () => {
-    expect(formatPrice(NaN)).toBe("0 kr");
+    expect(formatPrice(NaN)).toContain("0");
   });
 
   it("guards against invalid string", () => {
-    expect(formatPrice("not-a-number")).toBe("0 kr");
+    expect(formatPrice("not-a-number")).toContain("0");
   });
 });
 

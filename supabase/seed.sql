@@ -22,15 +22,15 @@ with restaurant as (
     status = excluded.status
   returning id
 )
-insert into public.locations (restaurant_id, name, address, phone, image_url, is_open)
-select restaurant.id, location.name, location.address, location.phone, location.image_url, location.is_open
+insert into public.locations (restaurant_id, name, address, phone, image_url, currency, is_open)
+select restaurant.id, location.name, location.address, location.phone, location.image_url, location.currency, location.is_open
 from restaurant
 cross join (
   values
-    ('Main Pickup Counter', '123 Main Street', '+47 22 10 10 10', 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80', true),
-    ('Harbor Pickup Window', '8 Dockside Lane', '+47 22 10 10 11', 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80', true),
-    ('West Side Kitchen', '44 Market Road', '+47 22 10 10 12', 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=800&q=80', false)
-) as location(name, address, phone, image_url, is_open)
+    ('Main Pickup Counter', '123 Main Street', '+47 22 10 10 10', 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80', 'NOK', true),
+    ('Harbor Pickup Window', '8 Dockside Lane', '+47 22 10 10 11', 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80', 'NOK', true),
+    ('West Side Kitchen', '44 Market Road', '+47 22 10 10 12', 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=800&q=80', 'NOK', false)
+) as location(name, address, phone, image_url, currency, is_open)
 on conflict (restaurant_id, name) do update set
   address = excluded.address,
   phone = excluded.phone,

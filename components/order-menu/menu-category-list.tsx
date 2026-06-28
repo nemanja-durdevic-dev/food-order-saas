@@ -13,6 +13,7 @@ import { useTranslations } from "./locale-context";
 type MenuCategoryListProps = {
   categories: MenuCategory[];
   categoryRefs: RefObject<Record<string, HTMLElement | null>>;
+  currency: string;
   getItemCartQuantity: (itemId: string) => number;
   hasBottomCartSpace: boolean;
   onOpenAllergens: () => void;
@@ -24,6 +25,7 @@ type MenuCategoryListProps = {
 export function MenuCategoryList({
   categories,
   categoryRefs,
+  currency,
   getItemCartQuantity,
   hasBottomCartSpace,
   onOpenAllergens,
@@ -86,6 +88,7 @@ export function MenuCategoryList({
                     <div className="grid min-w-0 gap-4">
                       {subcategory.menu_items.map((item, itemIndex) => (
                         <MenuItemCard
+                          currency={currency}
                           item={item}
                           itemCartQuantity={getItemCartQuantity(item.id)}
                           key={item.id}
@@ -101,6 +104,7 @@ export function MenuCategoryList({
                   <div className="grid min-w-0 gap-4">
                     {uncategorizedItems.map((item, itemIndex) => (
                       <MenuItemCard
+                        currency={currency}
                         item={item}
                         itemCartQuantity={getItemCartQuantity(item.id)}
                         key={item.id}
@@ -116,6 +120,7 @@ export function MenuCategoryList({
               <div className="grid min-w-0 gap-4">
                 {category.menu_items.map((item, itemIndex) => (
                   <MenuItemCard
+                    currency={currency}
                     item={item}
                     itemCartQuantity={getItemCartQuantity(item.id)}
                     key={item.id}
@@ -139,12 +144,14 @@ export function MenuItemCard({
   onOpenItemDetails,
   placeholderAccent,
   selectedAllergenIds,
+  currency,
 }: {
   item: MenuItem;
   itemCartQuantity: number;
   onOpenItemDetails: (item: MenuItem) => void;
   placeholderAccent: string;
   selectedAllergenIds: string[];
+  currency: string;
 }) {
   const t = useTranslations();
   const cartIndicatorClassName = itemCartQuantity ? "border-l-4 border-l-primary" : "border-l-0";
@@ -193,7 +200,7 @@ export function MenuItemCard({
               {item.description ?? t("item.description_default")}
             </p>
             <div className="mt-2 flex items-center justify-between gap-3">
-              <p className="text-base font-semibold">{formatPrice(item.price)}</p>
+              <p className="text-base font-semibold">{formatPrice(item.price, currency)}</p>
             </div>
           </div>
         </div>

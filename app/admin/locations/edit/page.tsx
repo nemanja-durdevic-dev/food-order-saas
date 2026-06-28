@@ -56,6 +56,7 @@ async function updateLocation(
   const name = String(formData.get("name") ?? "");
   const address = String(formData.get("address") ?? "");
   const phone = String(formData.get("phone") ?? "");
+  const currency = String(formData.get("currency") ?? "NOK");
   const isOpen = formData.get("is_open") === "on";
 
   if (!name) {
@@ -66,6 +67,7 @@ async function updateLocation(
     name,
     address: address || null,
     phone: phone || null,
+    currency,
     is_open: isOpen,
   };
 
@@ -167,7 +169,9 @@ export default async function LocationEditPage({ searchParams }: Props) {
 
   const { data: record } = await supabaseAdmin
     .from("locations")
-    .select("id, restaurant_id, name, address, phone, image_url, is_open, created_at, updated_at")
+    .select(
+      "id, restaurant_id, name, address, phone, image_url, currency, is_open, created_at, updated_at",
+    )
     .eq("id", id)
     .eq("restaurant_id", membership.restaurant_id)
     .maybeSingle();
