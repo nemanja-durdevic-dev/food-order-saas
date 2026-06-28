@@ -238,6 +238,7 @@ export const adminResources: AdminResource[] = [
     searchColumns: ["name", "name_no", "description", "description_no"],
     restaurantScoped: true,
     sort: { column: "name", ascending: true },
+    toggleField: { key: "is_available", label: "Available" },
     createFields: menuItemFields,
     editFields: menuItemFields,
     formSelect:

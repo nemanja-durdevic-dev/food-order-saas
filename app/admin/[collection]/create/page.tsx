@@ -144,6 +144,7 @@ export default async function AdminCreatePage({ params }: Props) {
           label: resource.label,
           pluralLabel: resource.pluralLabel,
           slug: resource.slug,
+          toggleField: resource.toggleField,
         }}
       />
     </AdminShell>

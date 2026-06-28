@@ -240,6 +240,7 @@ export default async function AdminEditPage({ params, searchParams }: Props) {
           label: resource.label,
           pluralLabel: resource.pluralLabel,
           slug: resource.slug,
+          toggleField: resource.toggleField,
         }}
       />
     </AdminShell>

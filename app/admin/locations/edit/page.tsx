@@ -217,6 +217,7 @@ export default async function LocationEditPage({ searchParams }: Props) {
           label: resource.label,
           pluralLabel: resource.pluralLabel,
           slug: resource.slug,
+          toggleField: resource.toggleField,
         }}
       >
         <div className="border-t border-border pt-8">

@@ -16,6 +16,7 @@ import {
 import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
 
+import { RecordToggle } from "@/components/admin/record-toggle";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { AdminField } from "@/lib/admin/resources";
@@ -40,6 +41,12 @@ type AdminRecordFormProps = {
     label: string;
     pluralLabel: string;
     slug: string;
+    toggleField?: {
+      key: string;
+      label: string;
+      trueValue?: string;
+      falseValue?: string;
+    };
   };
 };
 
@@ -677,45 +684,69 @@ export function AdminRecordForm({
         <div className="sticky top-14 z-20 flex items-center justify-between border-b border-border bg-background py-4 lg:top-0">
           <FormSubmitButton disabled={!hasChanges} mode={mode} />
 
-          {mode === "edit" && (canCreate || duplicateAction || deleteAction) ? (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button aria-label="Open form actions" size="icon" type="button" variant="outline">
-                  <Ellipsis className="size-4" aria-hidden="true" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-48 rounded-md p-1">
-                {canCreate ? (
-                  <Link
-                    className="flex h-9 items-center rounded-md px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
-                    href={`/admin/${resource.slug}/create`}
+          <div className="flex items-center gap-3">
+            {mode === "edit" && resource.toggleField && record ? (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="font-medium text-muted-foreground">
+                  {resource.toggleField.label}
+                </span>
+                <RecordToggle
+                  checked={
+                    resource.toggleField.trueValue !== undefined
+                      ? record[resource.toggleField.key] === resource.toggleField.trueValue
+                      : Boolean(record[resource.toggleField.key])
+                  }
+                  collection={resource.slug}
+                  recordId={String(record.id)}
+                />
+              </div>
+            ) : null}
+
+            {mode === "edit" && (canCreate || duplicateAction || deleteAction) ? (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    aria-label="Open form actions"
+                    size="icon"
+                    type="button"
+                    variant="outline"
                   >
-                    Create New
-                  </Link>
-                ) : null}
-                {duplicateAction ? (
-                  <button
-                    className="flex h-9 w-full items-center rounded-md px-3 text-left text-sm font-medium hover:bg-accent hover:text-accent-foreground"
-                    form={formId}
-                    formAction={duplicateAction}
-                    type="submit"
-                  >
-                    Duplicate
-                  </button>
-                ) : null}
-                {deleteAction ? (
-                  <button
-                    className="flex h-9 w-full items-center rounded-md px-3 text-left text-sm font-medium text-destructive hover:bg-destructive/10"
-                    form={formId}
-                    formAction={deleteAction}
-                    type="submit"
-                  >
-                    Delete
-                  </button>
-                ) : null}
-              </PopoverContent>
-            </Popover>
-          ) : null}
+                    <Ellipsis className="size-4" aria-hidden="true" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-48 rounded-md p-1">
+                  {canCreate ? (
+                    <Link
+                      className="flex h-9 items-center rounded-md px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+                      href={`/admin/${resource.slug}/create`}
+                    >
+                      Create New
+                    </Link>
+                  ) : null}
+                  {duplicateAction ? (
+                    <button
+                      className="flex h-9 w-full items-center rounded-md px-3 text-left text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+                      form={formId}
+                      formAction={duplicateAction}
+                      type="submit"
+                    >
+                      Duplicate
+                    </button>
+                  ) : null}
+                  {deleteAction ? (
+                    <button
+                      className="flex h-9 w-full items-center rounded-md px-3 text-left text-sm font-medium text-destructive hover:bg-destructive/10"
+                      form={formId}
+                      formAction={deleteAction}
+                      type="submit"
+                    >
+                      Delete
+                    </button>
+                  ) : null}
+                </PopoverContent>
+              </Popover>
+            ) : null}
+          </div>
         </div>
 
         {fields.map((field) =>
