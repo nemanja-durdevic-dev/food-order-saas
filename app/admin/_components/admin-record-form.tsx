@@ -633,7 +633,7 @@ export function AdminRecordForm({
       </div>
 
       <form action={action} className="w-full space-y-5" onChange={handleFieldChange}>
-        <div className="sticky top-14 z-40 flex items-center justify-between border-b border-border bg-background py-4 lg:top-0">
+        <div className="sticky top-14 z-20 flex items-center justify-between border-b border-border bg-background py-4 lg:top-0">
           <Button disabled={!hasChanges} size="sm" type="submit">
             {mode === "create" ? "Create" : "Save"}
           </Button>
