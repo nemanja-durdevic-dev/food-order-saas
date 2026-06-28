@@ -82,6 +82,11 @@ export type RestaurantSocialLinks = {
   tiktok_url: string | null;
 };
 
+export type RestaurantInfo = {
+  name: string;
+  logo_url: string | null;
+};
+
 export type OrderMenuProps = {
   allAllergens: ItemAllergen[];
   categories: MenuCategory[];
@@ -89,4 +94,5 @@ export type OrderMenuProps = {
   locations: Location[];
   overridesByLocationId?: Map<string, HoursOverride[]>;
   socialLinks: RestaurantSocialLinks;
+  restaurantInfo: RestaurantInfo;
 };

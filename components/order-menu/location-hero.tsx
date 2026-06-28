@@ -14,7 +14,6 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 
-import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/lib/supabase";
@@ -30,6 +29,7 @@ type LocationHeroProps = {
   onOpenInfo: () => void;
   onOpenAuth: () => void;
   onOpenLanguage: () => void;
+  restaurantInfo: { name: string; logo_url: string | null };
   selectedLocationImageUrl: string | null;
   selectedLocationName: string | null;
   userEmail: string | null;
@@ -44,6 +44,7 @@ export function LocationHero({
   onOpenInfo,
   onOpenAuth,
   onOpenLanguage,
+  restaurantInfo,
   selectedLocationImageUrl,
   selectedLocationName,
   userEmail,
@@ -79,7 +80,7 @@ export function LocationHero({
               </Button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-64" sideOffset={8}>
-              <div className="space-y-1">
+              <div className="space-y-1 p-1">
                 <PopoverClose asChild>
                   <Link
                     className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -178,7 +179,23 @@ export function LocationHero({
             </PopoverContent>
           </Popover>
           <div className="absolute bottom-2.5 left-1/2 z-30 -translate-x-1/2 text-center sm:bottom-6">
-            <Logo variant="badge" />
+            {restaurantInfo.logo_url ? (
+              <div className="flex size-16 items-center justify-center overflow-hidden rounded-md bg-white shadow-sm">
+                <Image
+                  alt={restaurantInfo.name}
+                  className="size-full object-cover"
+                  height={64}
+                  src={restaurantInfo.logo_url}
+                  width={64}
+                />
+              </div>
+            ) : (
+              <div className="flex size-16 flex-col items-center justify-center gap-0.5 rounded-md bg-white text-foreground shadow-sm">
+                <span className="text-lg font-black tracking-[-0.06em]">
+                  {restaurantInfo.name.charAt(0)}
+                </span>
+              </div>
+            )}
           </div>
           {selectedLocationImageUrl ? (
             <Image

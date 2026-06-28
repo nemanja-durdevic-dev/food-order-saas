@@ -117,7 +117,7 @@ export default async function RestaurantOrderPage({ params }: Props) {
 
   const { data: restaurant, error: restaurantError } = await supabase
     .from("restaurants")
-    .select("id, instagram_url, facebook_url, tiktok_url")
+    .select("id, name, logo_url, instagram_url, facebook_url, tiktok_url")
     .eq("slug", restaurantSlug)
     .eq("status", "active")
     .single();
@@ -412,6 +412,10 @@ export default async function RestaurantOrderPage({ params }: Props) {
         error={error}
         locations={locations}
         overridesByLocationId={overridesByLocationId}
+        restaurantInfo={{
+          name: restaurant.name,
+          logo_url: restaurant.logo_url,
+        }}
         socialLinks={{
           facebook_url: restaurant.facebook_url,
           instagram_url: restaurant.instagram_url,

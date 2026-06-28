@@ -45,6 +45,7 @@ export function OrderMenu({
   error,
   locations,
   overridesByLocationId,
+  restaurantInfo,
   socialLinks,
 }: OrderMenuProps) {
   const categoryRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -736,6 +737,7 @@ export function OrderMenu({
         onOpenLocation={openLocation}
         onOpenInfo={openInfo}
         onOpenLanguage={openLanguage}
+        restaurantInfo={restaurantInfo}
         selectedLocationImageUrl={selectedLocation?.image_url ?? null}
         selectedLocationName={selectedLocation?.name ?? null}
         userEmail={userEmail}
