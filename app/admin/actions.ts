@@ -287,7 +287,8 @@ async function buildAdminPayload(collection: string, formData: FormData, mode: "
   }
 
   if (mode === "create" && resource.restaurantScoped) {
-    payload.restaurant_id = membership.restaurant_id;
+    const scopeColumn = resource.scopeColumn ?? "restaurant_id";
+    payload[scopeColumn] = membership.restaurant_id;
   }
 
   return { membership, payload, relationshipValues, resource, uploadedImageUrls };
@@ -370,7 +371,8 @@ async function getAdminRecordForAction(collection: string, id: string) {
   let query = supabaseAdmin.from(resource.table).select("id").eq("id", id);
 
   if (resource.restaurantScoped) {
-    query = query.eq("restaurant_id", membership.restaurant_id);
+    const column = resource.scopeColumn ?? "restaurant_id";
+    query = query.eq(column, membership.restaurant_id);
   }
 
   const { data, error } = await query.maybeSingle();
@@ -423,7 +425,8 @@ export async function updateAdminRecord(collection: string, id: string, formData
       .eq("id", id);
 
     if (resource.restaurantScoped) {
-      existingImageQuery = existingImageQuery.eq("restaurant_id", membership.restaurant_id);
+      const column = resource.scopeColumn ?? "restaurant_id";
+      existingImageQuery = existingImageQuery.eq(column, membership.restaurant_id);
     }
 
     const { data, error } = await existingImageQuery.maybeSingle();
@@ -439,7 +442,8 @@ export async function updateAdminRecord(collection: string, id: string, formData
   let query = supabaseAdmin.from(resource.table).update(payload).eq("id", id);
 
   if (resource.restaurantScoped) {
-    query = query.eq("restaurant_id", membership.restaurant_id);
+    const column = resource.scopeColumn ?? "restaurant_id";
+    query = query.eq(column, membership.restaurant_id);
   }
 
   const { error } = await query;
@@ -481,7 +485,8 @@ export async function duplicateAdminRecord(collection: string, id: string, _form
   let recordQuery = supabaseAdmin.from(resource.table).select(resource.formSelect).eq("id", id);
 
   if (resource.restaurantScoped) {
-    recordQuery = recordQuery.eq("restaurant_id", membership.restaurant_id);
+    const column = resource.scopeColumn ?? "restaurant_id";
+    recordQuery = recordQuery.eq(column, membership.restaurant_id);
   }
 
   const { data: record, error: recordError } = await recordQuery.maybeSingle();
@@ -550,7 +555,8 @@ export async function duplicateAdminRecord(collection: string, id: string, _form
   }
 
   if (resource.restaurantScoped) {
-    payload.restaurant_id = membership.restaurant_id;
+    const scopeColumn = resource.scopeColumn ?? "restaurant_id";
+    payload[scopeColumn] = membership.restaurant_id;
   }
 
   const { data: duplicatedRecord, error } = await supabaseAdmin
@@ -596,7 +602,8 @@ export async function deleteAdminRecord(collection: string, id: string, _formDat
       .eq("id", id);
 
     if (resource.restaurantScoped) {
-      imageQuery = imageQuery.eq("restaurant_id", membership.restaurant_id);
+      const column = resource.scopeColumn ?? "restaurant_id";
+      imageQuery = imageQuery.eq(column, membership.restaurant_id);
     }
 
     const { data, error } = await imageQuery.maybeSingle();
@@ -612,7 +619,8 @@ export async function deleteAdminRecord(collection: string, id: string, _formDat
   let deleteQuery = supabaseAdmin.from(resource.table).delete().eq("id", id);
 
   if (resource.restaurantScoped) {
-    deleteQuery = deleteQuery.eq("restaurant_id", membership.restaurant_id);
+    const column = resource.scopeColumn ?? "restaurant_id";
+    deleteQuery = deleteQuery.eq(column, membership.restaurant_id);
   }
 
   const { error } = await deleteQuery;

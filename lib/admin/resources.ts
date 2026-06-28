@@ -259,7 +259,7 @@ export const adminResources: AdminResource[] = [
     editFields: [
       { key: "name", label: "Name", type: "text", required: true },
       { key: "description", label: "Description", type: "textarea" },
-      { key: "logo_url", label: "Logo URL", type: "text" },
+      { key: "logo_url", label: "Logo", type: "image" },
       { key: "brand_color", label: "Brand color", type: "text" },
       {
         key: "status",
@@ -296,7 +296,7 @@ export const adminResources: AdminResource[] = [
       { key: "name", label: "Name", type: "text", required: true },
       { key: "address", label: "Address", type: "text" },
       { key: "phone", label: "Phone", type: "text" },
-      { key: "image_url", label: "Image URL", type: "text" },
+      { key: "image_url", label: "Image", type: "image" },
       { key: "is_open", label: "Open", type: "boolean" },
     ],
     formSelect:
