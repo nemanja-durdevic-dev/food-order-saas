@@ -227,6 +227,7 @@ export function OrderMenu({
 
   // Scroll spy
   useEffect(() => {
+    const navHeight = navRef.current?.getBoundingClientRect().height ?? 96;
     const observer = new IntersectionObserver(
       (entries) => {
         if (programmaticScrollTimeoutRef.current) {
@@ -252,7 +253,7 @@ export function OrderMenu({
         }
       },
       {
-        rootMargin: "-96px 0px -60% 0px",
+        rootMargin: `-${navHeight}px 0px -60% 0px`,
         threshold: 0,
       },
     );
@@ -444,13 +445,7 @@ export function OrderMenu({
 
     requestAnimationFrame(() => {
       const navHeight = categoryNavRef.current?.getBoundingClientRect().height ?? 0;
-      const subcategoryNavHeight = subcategoryNavRef.current?.getBoundingClientRect().height ?? 0;
-      const targetTop =
-        element.getBoundingClientRect().top +
-        window.scrollY -
-        navHeight -
-        subcategoryNavHeight -
-        24;
+      const targetTop = element.getBoundingClientRect().top + window.scrollY - navHeight - 24;
 
       window.scrollTo({
         behavior: "smooth",

@@ -44,7 +44,7 @@ export function CategoryNav({
   return (
     <nav
       aria-label={t("general.menu_categories")}
-      className="sticky top-0 z-20 -mx-4 mb-6 overflow-visible border-b border-border bg-white py-3 sm:-mx-6 lg:-mx-8"
+      className="sticky top-0 z-20 -mx-4 mb-6 border-b border-border bg-white py-3 sm:-mx-6 lg:-mx-8"
       ref={navRef}
     >
       <div className="flex items-center gap-2 px-4 sm:px-6 lg:px-8">
@@ -106,7 +106,7 @@ export function CategoryNav({
       </div>
       {subcategories.length > 0 ? (
         <div
-          className="absolute left-0 right-0 top-full border-b border-border bg-white px-4 py-3 shadow-sm sm:px-6 lg:px-8"
+          className="-mx-4 mt-3 border-t border-border bg-white px-4 pb-1 pt-3 sm:-mx-6 lg:-mx-8 sm:px-6 lg:px-8"
           ref={subcategoryNavRef}
         >
           <div className="no-scrollbar overflow-x-auto">
