@@ -704,6 +704,16 @@ export function AdminRecordForm({
                     const { key, trueValue, falseValue } = resource.toggleField!;
                     const newChecked = !toggleChecked;
                     setToggleChecked(newChecked);
+
+                    const form = document.getElementById(formId) as HTMLFormElement | null;
+                    const field = form?.querySelector<HTMLElement>(`[name="${key}"]`);
+
+                    if (field instanceof HTMLInputElement && field.type === "checkbox") {
+                      field.checked = newChecked;
+                    } else if (field instanceof HTMLSelectElement && trueValue !== undefined) {
+                      field.value = newChecked ? trueValue : falseValue!;
+                    }
+
                     updateChangedField(
                       key,
                       trueValue !== undefined
