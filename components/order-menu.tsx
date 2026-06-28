@@ -227,7 +227,7 @@ export function OrderMenu({
 
   // Scroll spy
   useEffect(() => {
-    const navHeight = navRef.current?.getBoundingClientRect().height ?? 96;
+    const navHeight = categoryNavRef.current?.getBoundingClientRect().height ?? 96;
     const observer = new IntersectionObserver(
       (entries) => {
         if (programmaticScrollTimeoutRef.current) {
