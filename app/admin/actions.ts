@@ -819,12 +819,5 @@ export async function getMenuChanges(): Promise<MenuChange[]> {
   );
   const currentCategories = currentSnapshot.categoriesByLocale["en"] ?? [];
 
-  const { data: location } = await supabaseAdmin
-    .from("locations")
-    .select("currency")
-    .eq("restaurant_id", membership.restaurant_id)
-    .limit(1)
-    .maybeSingle();
-
-  return computeMenuDiff(publishedCategories, currentCategories, location?.currency ?? "NOK");
+  return computeMenuDiff(publishedCategories, currentCategories);
 }
