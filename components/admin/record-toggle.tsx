@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+import { useTransition } from "react";
 
 import { toggleRecordField } from "@/app/admin/actions";
 
@@ -11,8 +10,17 @@ type RecordToggleProps = {
   checked: boolean;
 };
 
-function ToggleSwitch({ checked }: { checked: boolean }) {
-  const { pending } = useFormStatus();
+export function RecordToggle({ collection, recordId, checked }: RecordToggleProps) {
+  const [pending, startTransition] = useTransition();
+
+  function handleToggle() {
+    const formData = new FormData();
+    formData.set("collection", collection);
+    formData.set("id", recordId);
+    startTransition(() => {
+      toggleRecordField(null, formData);
+    });
+  }
 
   return (
     <button
@@ -20,8 +28,8 @@ function ToggleSwitch({ checked }: { checked: boolean }) {
         checked ? "bg-green-500" : "bg-input"
       }`}
       disabled={pending}
+      onClick={handleToggle}
       role="switch"
-      type="submit"
       aria-checked={checked}
     >
       <span
@@ -30,17 +38,5 @@ function ToggleSwitch({ checked }: { checked: boolean }) {
         }`}
       />
     </button>
-  );
-}
-
-export function RecordToggle({ collection, recordId, checked }: RecordToggleProps) {
-  const [, action] = useActionState(toggleRecordField, null);
-
-  return (
-    <form action={action}>
-      <input name="collection" type="hidden" value={collection} />
-      <input name="id" type="hidden" value={recordId} />
-      <ToggleSwitch checked={checked} />
-    </form>
   );
 }
