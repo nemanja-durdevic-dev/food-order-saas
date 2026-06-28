@@ -2,6 +2,7 @@ import type { AdminBreadcrumbItem } from "./admin-breadcrumb";
 import { AdminBreadcrumb } from "./admin-breadcrumb";
 import { AdminSidebar } from "./admin-sidebar";
 import { MenuChanges } from "@/components/admin/menu-changes";
+import { getMenuChanges } from "@/app/admin/actions";
 
 type AdminShellProps = {
   activeSlug?: string;
@@ -12,7 +13,7 @@ type AdminShellProps = {
   restaurantName?: string;
 };
 
-export function AdminShell({
+export async function AdminShell({
   activeSlug,
   breadcrumbItems,
   children,
@@ -23,6 +24,8 @@ export function AdminShell({
   const resolvedBreadcrumbItems = breadcrumbItems?.map((item, index) =>
     index === 0 && restaurantName ? { ...item, label: restaurantName } : item,
   );
+
+  const menuChanges = menuDirty ? await getMenuChanges() : [];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -40,7 +43,7 @@ export function AdminShell({
                 Customers see the last published menu until you publish these admin changes.
               </p>
             </div>
-            <MenuChanges />
+            <MenuChanges changes={menuChanges} />
           </section>
         ) : menuPublishedAt ? (
           <p className="mb-6 text-xs text-muted-foreground">

@@ -1,12 +1,18 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import { CircleMinus, CirclePlus, PencilLine } from "lucide-react";
-import { toast } from "sonner";
 
 import type { MenuChange } from "@/lib/admin/menu-diff";
-import { getMenuChanges } from "@/app/admin/actions";
 import { publishMenuChanges } from "@/app/admin/actions";
+
+const CHANGE_ICON: Record<MenuChange["type"], typeof CirclePlus> = {
+  category_added: CirclePlus,
+  category_removed: CircleMinus,
+  category_renamed: PencilLine,
+  item_added: CirclePlus,
+  item_removed: CircleMinus,
+  item_price_changed: PencilLine,
+  item_made_available: CirclePlus,
+  item_made_unavailable: CircleMinus,
+};
 
 const CHANGE_ICON: Record<MenuChange["type"], typeof CirclePlus> = {
   category_added: CirclePlus,
@@ -41,18 +47,10 @@ function ChangeRow({ change }: { change: MenuChange }) {
   );
 }
 
-export function MenuChanges() {
-  const [changes, setChanges] = useState<MenuChange[] | null>(null);
-
-  useEffect(() => {
-    getMenuChanges().then(setChanges);
-  }, []);
-
+export function MenuChanges({ changes }: { changes: MenuChange[] }) {
   return (
     <div className="mt-3 space-y-2">
-      {changes === null ? (
-        <p className="text-sm text-amber-800">Checking changes…</p>
-      ) : changes.length > 0 ? (
+      {changes.length > 0 ? (
         <ul className="space-y-1">
           {changes.map((change, i) => (
             <ChangeRow change={change} key={i} />
@@ -63,12 +61,7 @@ export function MenuChanges() {
           Menu data changed (re-publish to refresh published menu).
         </p>
       )}
-      <form
-        action={async () => {
-          await publishMenuChanges();
-          toast.success("Menu published");
-        }}
-      >
+      <form action={publishMenuChanges}>
         <button
           className="mt-2 h-9 rounded-md bg-amber-950 px-3 text-sm font-medium text-white"
           type="submit"
