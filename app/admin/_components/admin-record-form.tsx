@@ -701,29 +701,17 @@ export function AdminRecordForm({
                     toggleChecked ? "bg-green-500" : "bg-input"
                   }`}
                   onClick={() => {
-                    const form = document.getElementById(formId) as HTMLFormElement | null;
-                    if (!form) return;
-                    const field = form.querySelector<HTMLElement>(
-                      `[name="${resource.toggleField?.key}"]`,
+                    const { key, trueValue, falseValue } = resource.toggleField!;
+                    const newChecked = !toggleChecked;
+                    setToggleChecked(newChecked);
+                    updateChangedField(
+                      key,
+                      trueValue !== undefined
+                        ? [newChecked ? trueValue : falseValue!]
+                        : newChecked
+                          ? ["on"]
+                          : [],
                     );
-                    if (!field) return;
-
-                    if (
-                      resource.toggleField?.trueValue !== undefined &&
-                      field instanceof HTMLSelectElement
-                    ) {
-                      field.value =
-                        field.value === resource.toggleField.trueValue
-                          ? resource.toggleField.falseValue!
-                          : resource.toggleField.trueValue;
-                    } else if (field instanceof HTMLInputElement && field.type === "checkbox") {
-                      field.checked = !field.checked;
-                    } else {
-                      return;
-                    }
-
-                    setToggleChecked(!toggleChecked);
-                    field.dispatchEvent(new Event("change", { bubbles: true }));
                   }}
                   role="switch"
                   type="button"
