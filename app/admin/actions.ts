@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getAdminResource, type AdminField } from "@/lib/admin/resources";
 import {
@@ -9,12 +10,8 @@ import {
   type MenuPublicationSnapshot,
 } from "@/lib/admin/menu-publications";
 import { computeMenuDiff, type MenuChange } from "@/lib/admin/menu-diff";
+import { getAdminClient } from "@/lib/admin/admin-client";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { createClient } from "@/lib/supabase-server";
-
-type AdminMembership = {
-  restaurant_id: string;
-};
 
 const MENU_ITEM_IMAGES_BUCKET = "menu-item-images";
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -118,31 +115,6 @@ async function copyAdminImage(publicUrl: string | null | undefined, restaurantId
   return getPublicImageUrl(destinationPath);
 }
 
-async function requireAdminMembership(): Promise<AdminMembership> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/admin/login");
-  }
-
-  const { data: membership } = await supabaseAdmin
-    .from("restaurant_members")
-    .select("restaurant_id")
-    .eq("user_id", user.id)
-    .in("role", ["admin", "owner"])
-    .limit(1)
-    .maybeSingle();
-
-  if (!membership) {
-    redirect("/");
-  }
-
-  return membership;
-}
-
 function getStringValue(formData: FormData, key: string) {
   const value = formData.get(key);
 
@@ -154,12 +126,13 @@ function getStringValue(formData: FormData, key: string) {
 }
 
 async function validateRelation(
+  supabase: SupabaseClient,
   table: string,
   id: string,
   restaurantId: string,
   restaurantScoped = true,
 ) {
-  let query = supabaseAdmin.from(table).select("id").eq("id", id);
+  let query = supabase.from(table).select("id").eq("id", id);
 
   if (restaurantScoped) {
     query = query.eq("restaurant_id", restaurantId);
@@ -172,8 +145,13 @@ async function validateRelation(
   }
 }
 
-async function buildAdminPayload(collection: string, formData: FormData, mode: "create" | "edit") {
-  const membership = await requireAdminMembership();
+async function buildAdminPayload(
+  supabase: SupabaseClient,
+  collection: string,
+  formData: FormData,
+  mode: "create" | "edit",
+  restaurantId: string,
+) {
   const resource = getAdminResource(collection);
 
   if (!resource) {
@@ -209,9 +187,10 @@ async function buildAdminPayload(collection: string, formData: FormData, mode: "
         if (field.relation) {
           for (const value of values) {
             await validateRelation(
+              supabase,
               field.relation.table,
               value,
-              membership.restaurant_id,
+              restaurantId,
               field.relation.restaurantScoped !== false,
             );
           }
@@ -225,7 +204,7 @@ async function buildAdminPayload(collection: string, formData: FormData, mode: "
         const file = formData.get(`${field.key}_file`);
 
         if (file instanceof File && file.size > 0) {
-          const imageUrl = await uploadAdminImage(file, membership.restaurant_id);
+          const imageUrl = await uploadAdminImage(file, restaurantId);
           uploadedImageUrls.push(imageUrl);
           payload[field.key] = imageUrl;
           continue;
@@ -275,9 +254,10 @@ async function buildAdminPayload(collection: string, formData: FormData, mode: "
 
         if (field.relation) {
           await validateRelation(
+            supabase,
             field.relation.table,
             value,
-            membership.restaurant_id,
+            restaurantId,
             field.relation.restaurantScoped !== false,
           );
         }
@@ -292,10 +272,10 @@ async function buildAdminPayload(collection: string, formData: FormData, mode: "
 
   if (mode === "create" && resource.restaurantScoped) {
     const scopeColumn = resource.scopeColumn ?? "restaurant_id";
-    payload[scopeColumn] = membership.restaurant_id;
+    payload[scopeColumn] = restaurantId;
   }
 
-  return { membership, payload, relationshipValues, resource, uploadedImageUrls };
+  return { restaurantId, payload, relationshipValues, resource, uploadedImageUrls };
 }
 
 function getImageFieldKeys(fields: AdminField[] | undefined) {
@@ -306,19 +286,24 @@ async function removeAdminImages(publicUrls: Array<string | null | undefined>) {
   await Promise.all(publicUrls.map((publicUrl) => removeAdminImage(publicUrl)));
 }
 
-async function markMenuDirty(restaurantId: string) {
-  await supabaseAdmin.from("restaurants").update({ menu_dirty: true }).eq("id", restaurantId);
+async function markMenuDirty(supabase: SupabaseClient, restaurantId: string) {
+  await supabase.from("restaurants").update({ menu_dirty: true }).eq("id", restaurantId);
 }
 
-async function markMenuDirtyForResource(restaurantId: string, resourceSlug: string) {
+async function markMenuDirtyForResource(
+  supabase: SupabaseClient,
+  restaurantId: string,
+  resourceSlug: string,
+) {
   if (!["categories", "menu-items", "subcategories"].includes(resourceSlug)) {
     return;
   }
 
-  await markMenuDirty(restaurantId);
+  await markMenuDirty(supabase, restaurantId);
 }
 
 async function syncJoinFields(
+  supabase: SupabaseClient,
   collection: string,
   sourceId: string,
   restaurantId: string,
@@ -334,7 +319,7 @@ async function syncJoinFields(
 
     const values = relationshipValues[field.key];
 
-    const { error: deleteError } = await supabaseAdmin
+    const { error: deleteError } = await supabase
       .from(field.join.table)
       .delete()
       .eq(field.join.sourceColumn, sourceId)
@@ -356,7 +341,7 @@ async function syncJoinFields(
       ...(field.join!.sortColumn ? { [field.join!.sortColumn]: index } : {}),
     }));
 
-    const { error: insertError } = await supabaseAdmin.from(field.join.table).insert(rows);
+    const { error: insertError } = await supabase.from(field.join.table).insert(rows);
 
     if (insertError) {
       throw new Error(insertError.message);
@@ -365,18 +350,18 @@ async function syncJoinFields(
 }
 
 async function getAdminRecordForAction(collection: string, id: string) {
-  const membership = await requireAdminMembership();
+  const { supabase, restaurantId } = await getAdminClient();
   const resource = getAdminResource(collection);
 
   if (!resource) {
     throw new Error("Unknown collection.");
   }
 
-  let query = supabaseAdmin.from(resource.table).select("id").eq("id", id);
+  let query = supabase.from(resource.table).select("id").eq("id", id);
 
   if (resource.restaurantScoped) {
     const column = resource.scopeColumn ?? "restaurant_id";
-    query = query.eq(column, membership.restaurant_id);
+    query = query.eq(column, restaurantId);
   }
 
   const { data, error } = await query.maybeSingle();
@@ -385,7 +370,7 @@ async function getAdminRecordForAction(collection: string, id: string) {
     throw new Error(`${resource.label} was not found.`);
   }
 
-  return { membership, resource };
+  return { supabase, restaurantId, resource };
 }
 
 export async function createAdminRecord(
@@ -395,30 +380,42 @@ export async function createAdminRecord(
 ) {
   void state;
 
-  const { membership, payload, relationshipValues, resource, uploadedImageUrls } =
-    await buildAdminPayload(collection, formData, "create");
+  const { supabase, restaurantId } = await getAdminClient();
+  const buildResult = await buildAdminPayload(
+    supabase,
+    collection,
+    formData,
+    "create",
+    restaurantId,
+  );
 
-  const { data, error } = await supabaseAdmin
-    .from(resource.table)
-    .insert(payload)
+  const { data, error } = await supabase
+    .from(buildResult.resource.table)
+    .insert(buildResult.payload)
     .select("id")
     .single();
 
   if (error) {
-    await removeAdminImages(uploadedImageUrls);
+    await removeAdminImages(buildResult.uploadedImageUrls);
     return { error: error.message };
   }
 
   try {
-    await syncJoinFields(collection, String(data.id), membership.restaurant_id, relationshipValues);
+    await syncJoinFields(
+      supabase,
+      collection,
+      String(data.id),
+      restaurantId,
+      buildResult.relationshipValues,
+    );
   } catch (error) {
-    await removeAdminImages(uploadedImageUrls);
+    await removeAdminImages(buildResult.uploadedImageUrls);
     return { error: error instanceof Error ? error.message : "Failed to sync join fields." };
   }
 
-  await markMenuDirtyForResource(membership.restaurant_id, resource.slug);
+  await markMenuDirtyForResource(supabase, restaurantId, buildResult.resource.slug);
   revalidatePath("/admin");
-  revalidatePath(`/admin/${resource.slug}`);
+  revalidatePath(`/admin/${buildResult.resource.slug}`);
   return { success: true };
 }
 
@@ -430,80 +427,83 @@ export async function updateAdminRecord(
 ) {
   void state;
 
-  const { membership, payload, relationshipValues, resource, uploadedImageUrls } =
-    await buildAdminPayload(collection, formData, "edit");
-  const imageFieldKeys = getImageFieldKeys(resource.editFields).filter((key) => key in payload);
+  const { supabase, restaurantId } = await getAdminClient();
+  const buildResult = await buildAdminPayload(supabase, collection, formData, "edit", restaurantId);
+
+  const imageFieldKeys = getImageFieldKeys(buildResult.resource.editFields).filter(
+    (key) => key in buildResult.payload,
+  );
   let existingImages: Record<string, unknown> = {};
 
   if (imageFieldKeys.length > 0) {
-    let existingImageQuery = supabaseAdmin
-      .from(resource.table)
+    let existingImageQuery = supabase
+      .from(buildResult.resource.table)
       .select(imageFieldKeys.join(", "))
       .eq("id", id);
 
-    if (resource.restaurantScoped) {
-      const column = resource.scopeColumn ?? "restaurant_id";
-      existingImageQuery = existingImageQuery.eq(column, membership.restaurant_id);
+    if (buildResult.resource.restaurantScoped) {
+      const column = buildResult.resource.scopeColumn ?? "restaurant_id";
+      existingImageQuery = existingImageQuery.eq(column, restaurantId);
     }
 
     const { data, error } = await existingImageQuery.maybeSingle();
 
     if (error) {
-      await removeAdminImages(uploadedImageUrls);
+      await removeAdminImages(buildResult.uploadedImageUrls);
       return { error: error.message };
     }
 
     existingImages = (data ?? {}) as Record<string, unknown>;
   }
 
-  let query = supabaseAdmin.from(resource.table).update(payload).eq("id", id);
+  let query = supabase.from(buildResult.resource.table).update(buildResult.payload).eq("id", id);
 
-  if (resource.restaurantScoped) {
-    const column = resource.scopeColumn ?? "restaurant_id";
-    query = query.eq(column, membership.restaurant_id);
+  if (buildResult.resource.restaurantScoped) {
+    const column = buildResult.resource.scopeColumn ?? "restaurant_id";
+    query = query.eq(column, restaurantId);
   }
 
   const { error } = await query;
 
   if (error) {
-    await removeAdminImages(uploadedImageUrls);
+    await removeAdminImages(buildResult.uploadedImageUrls);
     return { error: error.message };
   }
 
   try {
-    await syncJoinFields(collection, id, membership.restaurant_id, relationshipValues);
+    await syncJoinFields(supabase, collection, id, restaurantId, buildResult.relationshipValues);
   } catch (error) {
-    await removeAdminImages(uploadedImageUrls);
+    await removeAdminImages(buildResult.uploadedImageUrls);
     return { error: error instanceof Error ? error.message : "Failed to sync join fields." };
   }
 
   await removeAdminImages(
     imageFieldKeys
-      .filter((key) => payload[key] !== existingImages[key])
+      .filter((key) => buildResult.payload[key] !== existingImages[key])
       .map((key) => (typeof existingImages[key] === "string" ? existingImages[key] : null)),
   );
 
-  await markMenuDirtyForResource(membership.restaurant_id, resource.slug);
+  await markMenuDirtyForResource(supabase, restaurantId, buildResult.resource.slug);
   revalidatePath("/admin");
-  revalidatePath(`/admin/${resource.slug}`);
+  revalidatePath(`/admin/${buildResult.resource.slug}`);
   return { success: true };
 }
 
 export async function duplicateAdminRecord(collection: string, id: string, _formData?: FormData) {
   void _formData;
 
-  const { membership, resource } = await getAdminRecordForAction(collection, id);
+  const { supabase, restaurantId, resource } = await getAdminRecordForAction(collection, id);
   const fields = resource.createFields;
 
   if (!fields?.length || !resource.formSelect) {
     throw new Error(`${resource.label} cannot be duplicated.`);
   }
 
-  let recordQuery = supabaseAdmin.from(resource.table).select(resource.formSelect).eq("id", id);
+  let recordQuery = supabase.from(resource.table).select(resource.formSelect).eq("id", id);
 
   if (resource.restaurantScoped) {
     const column = resource.scopeColumn ?? "restaurant_id";
-    recordQuery = recordQuery.eq(column, membership.restaurant_id);
+    recordQuery = recordQuery.eq(column, restaurantId);
   }
 
   const { data: record, error: recordError } = await recordQuery.maybeSingle();
@@ -523,11 +523,11 @@ export async function duplicateAdminRecord(collection: string, id: string, _form
         continue;
       }
 
-      let joinQuery = supabaseAdmin
+      let joinQuery = supabase
         .from(field.join.table)
         .select(field.join.targetColumn)
         .eq(field.join.sourceColumn, id)
-        .eq("restaurant_id", membership.restaurant_id);
+        .eq("restaurant_id", restaurantId);
 
       for (const [column, value] of Object.entries(field.join.selectEquals ?? {})) {
         joinQuery = value === null ? joinQuery.is(column, null) : joinQuery.eq(column, value);
@@ -549,7 +549,7 @@ export async function duplicateAdminRecord(collection: string, id: string, _form
 
     if (field.type === "image") {
       const imageUrl = typeof value === "string" ? value : null;
-      const copiedImageUrl = await copyAdminImage(imageUrl, membership.restaurant_id);
+      const copiedImageUrl = await copyAdminImage(imageUrl, restaurantId);
 
       if (copiedImageUrl && copiedImageUrl !== imageUrl) {
         copiedImageUrls.push(copiedImageUrl);
@@ -573,10 +573,10 @@ export async function duplicateAdminRecord(collection: string, id: string, _form
 
   if (resource.restaurantScoped) {
     const scopeColumn = resource.scopeColumn ?? "restaurant_id";
-    payload[scopeColumn] = membership.restaurant_id;
+    payload[scopeColumn] = restaurantId;
   }
 
-  const { data: duplicatedRecord, error } = await supabaseAdmin
+  const { data: duplicatedRecord, error } = await supabase
     .from(resource.table)
     .insert(payload)
     .select("id")
@@ -589,9 +589,10 @@ export async function duplicateAdminRecord(collection: string, id: string, _form
 
   try {
     await syncJoinFields(
+      supabase,
       collection,
       String(duplicatedRecord.id),
-      membership.restaurant_id,
+      restaurantId,
       relationshipValues,
     );
   } catch (error) {
@@ -599,7 +600,7 @@ export async function duplicateAdminRecord(collection: string, id: string, _form
     throw error;
   }
 
-  await markMenuDirtyForResource(membership.restaurant_id, resource.slug);
+  await markMenuDirtyForResource(supabase, restaurantId, resource.slug);
   revalidatePath("/admin");
   revalidatePath(`/admin/${resource.slug}`);
   redirect(`/admin/${resource.slug}/edit?id=${encodeURIComponent(String(duplicatedRecord.id))}`);
@@ -608,19 +609,16 @@ export async function duplicateAdminRecord(collection: string, id: string, _form
 export async function deleteAdminRecord(collection: string, id: string, _formData?: FormData) {
   void _formData;
 
-  const { membership, resource } = await getAdminRecordForAction(collection, id);
+  const { supabase, restaurantId, resource } = await getAdminRecordForAction(collection, id);
   const imageFieldKeys = getImageFieldKeys(resource.editFields ?? resource.createFields);
   let imageUrls: Array<string | null> = [];
 
   if (imageFieldKeys.length > 0) {
-    let imageQuery = supabaseAdmin
-      .from(resource.table)
-      .select(imageFieldKeys.join(", "))
-      .eq("id", id);
+    let imageQuery = supabase.from(resource.table).select(imageFieldKeys.join(", ")).eq("id", id);
 
     if (resource.restaurantScoped) {
       const column = resource.scopeColumn ?? "restaurant_id";
-      imageQuery = imageQuery.eq(column, membership.restaurant_id);
+      imageQuery = imageQuery.eq(column, restaurantId);
     }
 
     const { data, error } = await imageQuery.maybeSingle();
@@ -633,11 +631,11 @@ export async function deleteAdminRecord(collection: string, id: string, _formDat
     imageUrls = imageFieldKeys.map((key) => (typeof record[key] === "string" ? record[key] : null));
   }
 
-  let deleteQuery = supabaseAdmin.from(resource.table).delete().eq("id", id);
+  let deleteQuery = supabase.from(resource.table).delete().eq("id", id);
 
   if (resource.restaurantScoped) {
     const column = resource.scopeColumn ?? "restaurant_id";
-    deleteQuery = deleteQuery.eq(column, membership.restaurant_id);
+    deleteQuery = deleteQuery.eq(column, restaurantId);
   }
 
   const { error } = await deleteQuery;
@@ -648,27 +646,18 @@ export async function deleteAdminRecord(collection: string, id: string, _formDat
 
   await removeAdminImages(imageUrls);
 
-  await markMenuDirtyForResource(membership.restaurant_id, resource.slug);
+  await markMenuDirtyForResource(supabase, restaurantId, resource.slug);
   revalidatePath("/admin");
   revalidatePath(`/admin/${resource.slug}`);
   redirect(`/admin/${resource.slug}`);
 }
 
 export async function publishMenuChanges() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/admin/login");
-  }
-
-  const membership = await requireAdminMembership();
-  const snapshot = await buildMenuPublicationSnapshot(supabaseAdmin, membership.restaurant_id);
-  const { error: insertError } = await supabaseAdmin.from("menu_publications").insert({
-    published_by: user.id,
-    restaurant_id: membership.restaurant_id,
+  const { supabase, restaurantId, userId } = await getAdminClient();
+  const snapshot = await buildMenuPublicationSnapshot(supabase, restaurantId);
+  const { error: insertError } = await supabase.from("menu_publications").insert({
+    published_by: userId,
+    restaurant_id: restaurantId,
     snapshot,
   });
 
@@ -676,10 +665,10 @@ export async function publishMenuChanges() {
     throw new Error(insertError.message);
   }
 
-  const { error: updateError } = await supabaseAdmin
+  const { error: updateError } = await supabase
     .from("restaurants")
     .update({ menu_dirty: false, menu_published_at: snapshot.publishedAt })
-    .eq("id", membership.restaurant_id);
+    .eq("id", restaurantId);
 
   if (updateError) {
     throw new Error(updateError.message);
@@ -691,38 +680,18 @@ export async function publishMenuChanges() {
 }
 
 export async function signOut() {
-  const supabase = await createClient();
+  const { supabase } = await getAdminClient();
   await supabase.auth.signOut();
   redirect("/admin");
 }
 
 export async function updateStripeSettings(formData: FormData) {
-  const restaurantId = String(formData.get("restaurantId") ?? "");
+  const { supabase, restaurantId } = await getAdminClient();
+
   const stripeAccountId = String(formData.get("stripeAccountId") ?? "").trim() || null;
   const paymentsEnabled = formData.get("paymentsEnabled") === "true";
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/admin");
-  }
-
-  const { data: membership } = await supabaseAdmin
-    .from("restaurant_members")
-    .select("id")
-    .eq("restaurant_id", restaurantId)
-    .eq("user_id", user.id)
-    .in("role", ["admin", "owner"])
-    .maybeSingle();
-
-  if (!membership) {
-    throw new Error("You do not have access to update this restaurant.");
-  }
-
-  const { error } = await supabaseAdmin
+  const { error } = await supabase
     .from("restaurants")
     .update({
       payments_enabled: paymentsEnabled,
@@ -739,35 +708,15 @@ export async function updateStripeSettings(formData: FormData) {
 }
 
 export async function toggleLocationStatus(formData: FormData) {
+  const { supabase, restaurantId } = await getAdminClient();
   const locationId = String(formData.get("locationId") ?? "");
   const newStatus = formData.get("is_open") === "true";
-  const restaurantId = String(formData.get("restaurantId") ?? "");
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/admin");
-  }
-
-  const { data: membership } = await supabaseAdmin
-    .from("restaurant_members")
-    .select("id")
-    .eq("restaurant_id", restaurantId)
-    .eq("user_id", user.id)
-    .in("role", ["admin", "owner"])
-    .maybeSingle();
-
-  if (!membership) {
-    throw new Error("You do not have access to update this location.");
-  }
-
-  const { error } = await supabaseAdmin
+  const { error } = await supabase
     .from("locations")
     .update({ is_open: newStatus })
-    .eq("id", locationId);
+    .eq("id", locationId)
+    .eq("restaurant_id", restaurantId);
 
   if (error) {
     throw new Error(error.message);
@@ -777,31 +726,12 @@ export async function toggleLocationStatus(formData: FormData) {
 }
 
 export async function getMenuChanges(): Promise<MenuChange[]> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, restaurantId } = await getAdminClient();
 
-  if (!user) {
-    return [];
-  }
-
-  const { data: membership } = await supabase
-    .from("restaurant_members")
-    .select("restaurant_id")
-    .eq("user_id", user.id)
-    .in("role", ["admin", "owner"])
-    .limit(1)
-    .maybeSingle();
-
-  if (!membership) {
-    return [];
-  }
-
-  const { data: lastPublication } = await supabaseAdmin
+  const { data: lastPublication } = await supabase
     .from("menu_publications")
     .select("snapshot")
-    .eq("restaurant_id", membership.restaurant_id)
+    .eq("restaurant_id", restaurantId)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -811,13 +741,24 @@ export async function getMenuChanges(): Promise<MenuChange[]> {
   }
 
   const snapshot = lastPublication.snapshot as unknown as MenuPublicationSnapshot;
-  const publishedCategories = snapshot.categoriesByLocale["en"] ?? [];
 
-  const currentSnapshot = await buildMenuPublicationSnapshot(
-    supabaseAdmin,
-    membership.restaurant_id,
-  );
-  const currentCategories = currentSnapshot.categoriesByLocale["en"] ?? [];
+  const locales = ["da", "en", "no", "sv"] as const;
+  const currentSnapshot = await buildMenuPublicationSnapshot(supabase, restaurantId);
+  const seen = new Set<string>();
+  const allChanges: MenuChange[] = [];
 
-  return computeMenuDiff(publishedCategories, currentCategories);
+  for (const locale of locales) {
+    const published = snapshot.categoriesByLocale[locale] ?? [];
+    const current = currentSnapshot.categoriesByLocale[locale] ?? [];
+    const localeChanges = computeMenuDiff(published, current);
+
+    for (const change of localeChanges) {
+      const key = `${change.type}:${change.summary}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      allChanges.push(change);
+    }
+  }
+
+  return allChanges;
 }

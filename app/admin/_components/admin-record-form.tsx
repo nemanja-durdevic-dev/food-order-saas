@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Ellipsis, LoaderCircle } from "lucide-react";
 import {
   type ChangeEvent,
+  startTransition,
   useActionState,
   useEffect,
   useId,
@@ -616,6 +617,9 @@ export function AdminRecordForm({
       toast.error(state.error);
     } else if (state.success) {
       toast.success("Saved");
+      startTransition(() => {
+        setChangedFields({});
+      });
     }
   }, [state]);
 
