@@ -141,7 +141,6 @@ export async function buildMenuPublicationSnapshot(
         "id, category_id, subcategory_id, is_available, name, name_no, name_sv, name_da, description, description_no, description_sv, description_da, image_url, price",
       )
       .eq("restaurant_id", restaurantId)
-      .eq("is_available", true)
       .order("name", { ascending: true }),
     supabase
       .from("menu_item_ingredients")
