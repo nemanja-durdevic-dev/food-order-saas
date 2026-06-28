@@ -13,13 +13,29 @@ export type MenuChange = {
     | "item_made_unavailable";
 };
 
-function formatPrice(price: number | string) {
-  return `$${Number(price).toFixed(2)}`;
+const CURRENCY_LOCALE: Record<string, string> = {
+  DKK: "da-DK",
+  EUR: "en-IE",
+  ISK: "is-IS",
+  NOK: "nb-NO",
+  SEK: "sv-SE",
+};
+
+function formatPrice(price: number | string, currency: string) {
+  const value = Number(price);
+  if (Number.isNaN(value)) return "–";
+  return new Intl.NumberFormat(CURRENCY_LOCALE[currency] ?? "nb-NO", {
+    currency,
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    style: "currency",
+  }).format(value);
 }
 
 export function computeMenuDiff(
   publishedCategories: MenuCategory[],
   currentCategories: MenuCategory[],
+  currency = "NOK",
 ): MenuChange[] {
   const changes: MenuChange[] = [];
 
@@ -82,7 +98,7 @@ export function computeMenuDiff(
     } else {
       if (Number(publishedItem.price) !== Number(item.price)) {
         changes.push({
-          summary: `Changed "${item.name}" price from ${formatPrice(publishedItem.price)} to ${formatPrice(item.price)}`,
+          summary: `Changed "${item.name}" price from ${formatPrice(publishedItem.price, currency)} to ${formatPrice(item.price, currency)}`,
           type: "item_price_changed",
         });
       }
