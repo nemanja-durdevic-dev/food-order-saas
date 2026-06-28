@@ -725,6 +725,80 @@ export async function toggleLocationStatus(formData: FormData) {
   revalidatePath("/admin");
 }
 
+export async function addLocationHoursOverride(formData: FormData) {
+  const { supabase, restaurantId } = await getAdminClient();
+  const locationId = String(formData.get("locationId") ?? "");
+  const date = String(formData.get("date") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim() || null;
+  const isClosed = formData.get("is_closed") === "on";
+  const openTime = String(formData.get("open_time") ?? "").trim() || null;
+  const closeTime = String(formData.get("close_time") ?? "").trim() || null;
+
+  if (!locationId || !date) {
+    return { error: "Location and date are required." };
+  }
+
+  const { data: locationData, error: locationError } = await supabase
+    .from("locations")
+    .select("id")
+    .eq("id", locationId)
+    .eq("restaurant_id", restaurantId)
+    .maybeSingle();
+
+  if (locationError || !locationData) return { error: "Location not found." };
+
+  const { error } = await supabase.from("location_hours_overrides").upsert(
+    {
+      location_id: locationId,
+      date,
+      is_closed: isClosed,
+      open_time: isClosed ? null : openTime,
+      close_time: isClosed ? null : closeTime,
+      reason,
+    },
+    { onConflict: "location_id, date" },
+  );
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/admin/locations/edit?id=${encodeURIComponent(locationId)}`);
+  return { success: true };
+}
+
+export async function deleteLocationHoursOverride(formData: FormData) {
+  const { supabase, restaurantId } = await getAdminClient();
+  const overrideId = String(formData.get("overrideId") ?? "");
+  const locationId = String(formData.get("locationId") ?? "");
+
+  if (!overrideId || !locationId) {
+    return { error: "Override ID and location ID are required." };
+  }
+
+  const { data: locationData, error: locationError } = await supabase
+    .from("locations")
+    .select("id")
+    .eq("id", locationId)
+    .eq("restaurant_id", restaurantId)
+    .maybeSingle();
+
+  if (locationError || !locationData) return { error: "Location not found." };
+
+  const { error } = await supabase
+    .from("location_hours_overrides")
+    .delete()
+    .eq("id", overrideId)
+    .eq("location_id", locationId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/admin/locations/edit?id=${encodeURIComponent(locationId)}`);
+  return { success: true };
+}
+
 export async function getMenuChanges(): Promise<MenuChange[]> {
   const { supabase, restaurantId } = await getAdminClient();
 

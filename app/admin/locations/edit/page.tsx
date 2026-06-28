@@ -8,6 +8,8 @@ import { getAdminClient } from "@/lib/admin/admin-client";
 import { AdminRecordForm } from "../../_components/admin-record-form";
 import { AdminShell } from "../../_components/admin-shell";
 import { LocationHoursSection } from "@/components/admin/location-hours-section";
+import { LocationHoursOverridesSection } from "@/components/admin/location-hours-overrides-section";
+import { addLocationHoursOverride, deleteLocationHoursOverride } from "../../actions";
 
 type Props = {
   searchParams?: Promise<{ id?: string }>;
@@ -169,7 +171,15 @@ export default async function LocationEditPage({ searchParams }: Props) {
     .eq("location_id", id)
     .order("day", { ascending: true });
 
+  const { data: overrides } = await supabaseAdmin
+    .from("location_hours_overrides")
+    .select("id, date, is_closed, open_time, close_time, reason")
+    .eq("location_id", id)
+    .order("date", { ascending: true });
+
   const action = updateLocation.bind(null, id);
+  const addOverride = addLocationHoursOverride.bind(null);
+  const deleteOverride = deleteLocationHoursOverride.bind(null);
 
   const imageValues: Record<string, string> = {};
 
@@ -211,6 +221,24 @@ export default async function LocationEditPage({ searchParams }: Props) {
                 open_time: string | null;
                 close_time: string | null;
                 is_closed: boolean;
+              }>
+            }
+          />
+        </div>
+
+        <div className="border-t border-border pt-8">
+          <LocationHoursOverridesSection
+            addAction={addOverride}
+            deleteAction={deleteOverride}
+            locationId={id}
+            overrides={
+              (overrides ?? []) as Array<{
+                id: string;
+                date: string;
+                is_closed: boolean;
+                open_time: string | null;
+                close_time: string | null;
+                reason: string | null;
               }>
             }
           />

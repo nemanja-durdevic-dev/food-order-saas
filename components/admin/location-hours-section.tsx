@@ -46,14 +46,14 @@ export function LocationHoursSection({ hours }: LocationHoursSectionProps) {
 
           return (
             <div
-              className="flex items-center gap-3 rounded-md border border-border bg-card px-4 py-3"
+              className="flex flex-col gap-2 rounded-md border border-border bg-card px-4 py-3 sm:flex-row sm:items-center sm:gap-3"
               key={day}
             >
-              <span className="w-28 text-sm font-medium">{label}</span>
+              <span className="text-sm font-medium sm:w-28">{label}</span>
 
-              <div className={`flex items-center gap-2 ${isClosed ? "opacity-40" : ""}`}>
+              <div className={`flex flex-wrap items-center gap-2 ${isClosed ? "opacity-40" : ""}`}>
                 <input
-                  className="h-9 w-24 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-40"
+                  className="h-9 w-28 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-40 sm:w-24"
                   disabled={isClosed}
                   name={`day_${day}_open`}
                   defaultValue={formatTime(existing?.open_time ?? null)}
@@ -61,7 +61,7 @@ export function LocationHoursSection({ hours }: LocationHoursSectionProps) {
                 />
                 <span className="text-sm text-muted-foreground">to</span>
                 <input
-                  className="h-9 w-24 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-40"
+                  className="h-9 w-28 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-40 sm:w-24"
                   disabled={isClosed}
                   name={`day_${day}_close`}
                   defaultValue={formatTime(existing?.close_time ?? null)}
