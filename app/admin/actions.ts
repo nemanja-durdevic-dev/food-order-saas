@@ -758,3 +758,42 @@ export async function toggleLocationStatus(formData: FormData) {
 
   revalidatePath("/admin");
 }
+
+export async function saveLocationHours(locationId: string, formData: FormData) {
+  const membership = await requireAdminMembership();
+
+  const { data: location } = await supabaseAdmin
+    .from("locations")
+    .select("id")
+    .eq("id", locationId)
+    .eq("restaurant_id", membership.restaurant_id)
+    .maybeSingle();
+
+  if (!location) {
+    throw new Error("Location not found.");
+  }
+
+  for (const day of [0, 1, 2, 3, 4, 5, 6]) {
+    const isClosed = formData.get(`day_${day}_closed`) === "on";
+    const openTime = String(formData.get(`day_${day}_open`) ?? "");
+    const closeTime = String(formData.get(`day_${day}_close`) ?? "");
+
+    const { error } = await supabaseAdmin.from("location_hours").upsert(
+      {
+        location_id: locationId,
+        day,
+        is_closed: isClosed,
+        open_time: isClosed || !openTime || !closeTime ? null : openTime,
+        close_time: isClosed || !openTime || !closeTime ? null : closeTime,
+      },
+      { onConflict: "location_id, day" },
+    );
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  revalidatePath("/admin/locations");
+  redirect(`/admin/locations/edit?id=${encodeURIComponent(locationId)}`);
+}
