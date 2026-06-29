@@ -10,6 +10,7 @@ export type AdminColumn = {
 export type AdminFieldOption = {
   label: string;
   value: string;
+  data?: Record<string, unknown>;
 };
 
 export type AdminField = {

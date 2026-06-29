@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Check, X } from "lucide-react";
 
 import type { AdminFieldOption } from "@/lib/admin/resources";
@@ -27,6 +27,7 @@ export function SearchableMultiSelect({
   searchUrl,
 }: SearchableMultiSelectProps) {
   const inputId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [selectedValues, setSelectedValues] = useState(defaultValue);
   const [selectedOptions, setSelectedOptions] = useState(options);
@@ -90,6 +91,8 @@ export function SearchableMultiSelect({
       return;
     }
 
+    setQuery("");
+    inputRef.current?.focus();
     setSelectedValues((currentValues) => [...currentValues, option.value]);
     setSelectedOptions((currentOptions) =>
       currentOptions.some((currentOption) => currentOption.value === option.value)

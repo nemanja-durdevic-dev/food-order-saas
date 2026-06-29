@@ -615,6 +615,9 @@ export function AdminRecordForm({
   const [changedFields, setChangedFields] = useState<Record<string, boolean>>({});
   const hasChanges = Object.values(changedFields).some(Boolean);
   const [state, formAction] = useActionState<ActionState, FormData>(action, null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
+    record && typeof record.category_id === "string" ? record.category_id : "",
+  );
   const [toggleChecked, setToggleChecked] = useState(
     mode === "edit" && resource.toggleField && record
       ? resource.toggleField.trueValue !== undefined
@@ -665,6 +668,10 @@ export function AdminRecordForm({
 
     if (!field.name || field.name.endsWith("_file")) {
       return;
+    }
+
+    if (field.name === "category_id") {
+      setSelectedCategoryId(field.value);
     }
 
     updateChangedField(
@@ -801,9 +808,35 @@ export function AdminRecordForm({
 
         {fields
           .filter((field) => field.key !== resource.toggleField?.key)
-          .map((field) =>
-            renderField(field, record, resource.slug, imageValues, updateChangedField),
-          )}
+          .map((field) => {
+            if (field.key === "subcategory_id") {
+              const filteredOptions = selectedCategoryId
+                ? (field.options ?? []).filter((opt) => opt.data?.categoryId === selectedCategoryId)
+                : [];
+
+              if (filteredOptions.length === 0) return null;
+
+              return (
+                <label className="block text-sm" key={field.key}>
+                  <span className="font-medium">{field.label}</span>
+                  <select
+                    className="mt-1 h-10 w-full rounded-md border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                    defaultValue={getDefaultValue(record, field.key)}
+                    name={field.key}
+                  >
+                    <option value="">None</option>
+                    {filteredOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              );
+            }
+
+            return renderField(field, record, resource.slug, imageValues, updateChangedField);
+          })}
         {resource.toggleField ? (
           <input
             type="checkbox"
