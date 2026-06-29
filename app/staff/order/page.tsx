@@ -39,28 +39,6 @@ type MenuItemRow = {
   price: number | string;
 };
 
-type IngredientRelation = {
-  name: string;
-  name_no: string | null;
-  name_sv: string | null;
-  name_da: string | null;
-};
-
-type MenuItemIngredientRow = {
-  ingredient_id: string;
-  ingredients: IngredientRelation | IngredientRelation[] | null;
-  menu_item_id: string;
-};
-
-type MenuItemAllergenRow = {
-  allergen_id: string;
-  allergens:
-    | { name: string; name_no: string | null; name_sv: string | null; name_da: string | null }
-    | { name: string; name_no: string | null; name_sv: string | null; name_da: string | null }[]
-    | null;
-  menu_item_id: string;
-};
-
 type AllergenFields = {
   name: string;
   name_no: string | null;
@@ -68,18 +46,31 @@ type AllergenFields = {
   name_da: string | null;
 };
 
-type AddOnRelation = {
-  name: string;
-  name_no: string | null;
-  name_sv: string | null;
-  name_da: string | null;
-  price: number | string;
+type MenuItemAllergenRow = {
+  allergen_id: string;
+  allergens: AllergenFields | AllergenFields[] | null;
+  menu_item_id: string;
 };
 
-type MenuItemAddOnRow = {
-  add_on_options: AddOnRelation | AddOnRelation[] | null;
-  add_on_option_id: string;
+type OptionGroupRelation = Record<string, unknown>;
+
+type OptionGroupChoiceRelation = Record<string, unknown>;
+
+type OptionGroupRow = {
+  id: string;
   menu_item_id: string;
+  option_group_id: string;
+  sort_order: number;
+  is_required: boolean | null;
+  is_multi_select: boolean | null;
+  option_groups: OptionGroupRelation;
+};
+
+type OptionGroupChoiceRow = {
+  menu_item_option_group_id: string;
+  option_group_choice_id: string;
+  sort_order: number;
+  option_group_choices: OptionGroupChoiceRelation;
 };
 
 type CategoryAvailabilityRow = {
@@ -163,9 +154,9 @@ export default async function StaffOrderPage() {
     categoryAvailabilityResult,
     itemAvailabilityResult,
     menuItemsResult,
-    ingredientsResult,
+    optionGroupsResult,
+    optionGroupChoicesResult,
     allergensResult,
-    addOnsResult,
   ] = await Promise.all([
     supabase
       .from("categories")
@@ -193,19 +184,20 @@ export default async function StaffOrderPage() {
       )
       .order("name", { ascending: true }),
     supabase
-      .from("menu_item_ingredients")
-      .select("menu_item_id, ingredient_id, ingredients(name, name_no, name_sv, name_da)")
-      .eq("is_removable", true)
+      .from("menu_item_option_groups")
+      .select(
+        "id, menu_item_id, option_group_id, sort_order, is_required, is_multi_select, option_groups!inner(id, name, name_no, name_sv, name_da, description, description_no, description_sv, description_da, is_required, is_multi_select, min_select, max_select)",
+      )
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("menu_item_option_group_choices")
+      .select(
+        "menu_item_option_group_id, option_group_choice_id, sort_order, option_group_choices!inner(id, name, name_no, name_sv, name_da, price_modifier_type, price_modifier, sort_order)",
+      )
       .order("sort_order", { ascending: true }),
     supabase
       .from("menu_item_allergens")
       .select("menu_item_id, allergen_id, allergens(name, name_no, name_sv, name_da)")
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("menu_item_add_on_options")
-      .select(
-        "menu_item_id, add_on_option_id, add_on_options(name, price, name_no, name_sv, name_da)",
-      )
       .order("sort_order", { ascending: true }),
   ]);
 
@@ -234,20 +226,95 @@ export default async function StaffOrderPage() {
     return availableLocationIds;
   }, new Map<string, string[]>());
 
-  const ingredientsByItemId = ((ingredientsResult.data ?? []) as MenuItemIngredientRow[]).reduce(
-    (ingredients, row) => {
-      const ingredient = firstRelation(row.ingredients) as IngredientRelation | null;
-      if (!ingredient) return ingredients;
-      const itemIngredients = ingredients.get(row.menu_item_id) ?? [];
-      itemIngredients.push({
-        id: row.ingredient_id,
-        name: ingredient[`name_${locale}` as keyof IngredientRelation] ?? ingredient.name,
-      });
-      ingredients.set(row.menu_item_id, itemIngredients);
-      return ingredients;
-    },
-    new Map<string, Array<{ id: string; name: string }>>(),
+  const rawOptionGroupData = (optionGroupsResult.data ?? []) as unknown as OptionGroupRow[];
+  const rawOptionGroupChoiceData = (optionGroupChoicesResult.data ??
+    []) as unknown as OptionGroupChoiceRow[];
+
+  const groupsByItemAssignmentId = new Map(
+    rawOptionGroupData.map((row) => {
+      const group = row.option_groups as Record<string, unknown>;
+      const localizedName = (group[`name_${locale}`] as string | null) ?? (group.name as string);
+      const localizedDescription =
+        (group[`description_${locale}`] as string | null) ?? (group.description as string | null);
+      return [
+        row.id,
+        {
+          menuItemId: row.menu_item_id,
+          groupId: row.option_group_id,
+          group: {
+            id: group.id as string,
+            name: localizedName,
+            description: localizedDescription ?? undefined,
+            isRequired: row.is_required ?? (group.is_required as boolean),
+            isMultiSelect: row.is_multi_select ?? (group.is_multi_select as boolean),
+            minSelect: (group.min_select as number | null) ?? 0,
+            maxSelect: (group.max_select as number | null) ?? null,
+            sortOrder: row.sort_order,
+          },
+        },
+      ];
+    }),
   );
+  const choicesByAssignmentId = rawOptionGroupChoiceData.reduce((choices, row) => {
+    const c = row.option_group_choices as Record<string, unknown>;
+    const localizedName = (c[`name_${locale}`] as string | null) ?? (c.name as string);
+
+    const assignmentChoices = choices.get(row.menu_item_option_group_id) ?? [];
+    assignmentChoices.push({
+      id: row.option_group_choice_id,
+      name: localizedName,
+      priceModifierType: c.price_modifier_type as string as "increase" | "decrease" | "neutral",
+      priceModifier: Number(c.price_modifier),
+    });
+    choices.set(row.menu_item_option_group_id, assignmentChoices);
+
+    return choices;
+  }, new Map<string, Array<{ id: string; name: string; priceModifierType: "increase" | "decrease" | "neutral"; priceModifier: number }>>());
+  const optionGroupsByItemId = new Map<
+    string,
+    Array<{
+      id: string;
+      name: string;
+      description?: string;
+      isRequired: boolean;
+      isMultiSelect: boolean;
+      minSelect: number;
+      maxSelect: number | null;
+      choices: Array<{
+        id: string;
+        name: string;
+        priceModifierType: "increase" | "decrease" | "neutral";
+        priceModifier: number;
+      }>;
+    }>
+  >();
+
+  for (const [assignmentId, assignment] of groupsByItemAssignmentId) {
+    const itemGroups = optionGroupsByItemId.get(assignment.menuItemId) ?? [];
+    const existing = itemGroups.find((g) => g.id === assignment.groupId);
+
+    if (!existing) {
+      const groupChoices = (choicesByAssignmentId.get(assignmentId) ?? []).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+      itemGroups.push({
+        id: assignment.group.id,
+        name: assignment.group.name,
+        description: assignment.group.description ?? undefined,
+        isRequired: assignment.group.isRequired,
+        isMultiSelect: assignment.group.isMultiSelect,
+        minSelect: assignment.group.minSelect,
+        maxSelect: assignment.group.maxSelect,
+        choices: groupChoices,
+      });
+      optionGroupsByItemId.set(assignment.menuItemId, itemGroups);
+    } else {
+      const groupChoices = (choicesByAssignmentId.get(assignmentId) ?? []).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+      existing.choices.push(...groupChoices);
+    }
+  }
 
   const allergensByItemId = ((allergensResult.data ?? []) as MenuItemAllergenRow[]).reduce(
     (allergens, row) => {
@@ -266,20 +333,6 @@ export default async function StaffOrderPage() {
     },
     new Map<string, Array<{ id: string; name: string }>>(),
   );
-
-  const addOnsByItemId = ((addOnsResult.data ?? []) as MenuItemAddOnRow[]).reduce((addOns, row) => {
-    const addOnOption = firstRelation(row.add_on_options) as AddOnRelation | null;
-    if (!addOnOption) return addOns;
-    const itemAddOns = addOns.get(row.menu_item_id) ?? [];
-    itemAddOns.push({
-      id: row.add_on_option_id,
-      name:
-        (addOnOption[`name_${locale}` as keyof AddOnRelation] as string | null) ?? addOnOption.name,
-      price: Number(addOnOption.price),
-    });
-    addOns.set(row.menu_item_id, itemAddOns);
-    return addOns;
-  }, new Map<string, Array<{ id: string; name: string; price: number }>>());
 
   const subcategoriesByCategoryId = ((subcategoriesResult?.data ?? []) as SubcategoryRow[]).reduce(
     (subcategories, subcategory) => {
@@ -307,10 +360,9 @@ export default async function StaffOrderPage() {
         .filter((item) => item.category_id === category.id)
         .map((item) => ({
           ...item,
-          addOnOptions: addOnsByItemId.get(item.id) ?? [],
+          optionGroups: optionGroupsByItemId.get(item.id) ?? [],
           allergens: allergensByItemId.get(item.id) ?? [],
           availableLocationIds: availableLocationIdsByItemId.get(item.id) ?? [],
-          ingredients: ingredientsByItemId.get(item.id) ?? [],
         }));
 
       return {

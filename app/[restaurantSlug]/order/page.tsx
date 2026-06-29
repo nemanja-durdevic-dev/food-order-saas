@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { getLocale } from "@/lib/dictionaries";
-import type { MenuCategory } from "@/components/order-menu/types";
+import type { Location, MenuCategory } from "@/components/order-menu/types";
 import { OrderMenu } from "@/components/order-menu";
 import { supabase } from "@/lib/supabase";
 import { BRAND_NAME } from "@/lib/brand";
@@ -53,19 +53,6 @@ type MenuItemRow = {
   price: number | string;
 };
 
-type IngredientRelation = {
-  name: string;
-  name_no: string | null;
-  name_sv: string | null;
-  name_da: string | null;
-};
-
-type MenuItemIngredientRow = {
-  ingredient_id: string;
-  ingredients: IngredientRelation | IngredientRelation[] | null;
-  menu_item_id: string;
-};
-
 type AllergenFields = {
   name: string;
   name_no: string | null;
@@ -87,19 +74,9 @@ type AllergenRow = {
   name_da: string | null;
 };
 
-type AddOnRelation = {
-  name: string;
-  name_no: string | null;
-  name_sv: string | null;
-  name_da: string | null;
-  price: number | string;
-};
+type OptionGroupRelation = Record<string, unknown>;
 
-type MenuItemAddOnRow = {
-  add_on_options: AddOnRelation | AddOnRelation[] | null;
-  add_on_option_id: string;
-  menu_item_id: string;
-};
+type OptionGroupChoiceRelation = Record<string, unknown>;
 
 type CategoryAvailabilityRow = {
   category_id: string;
@@ -149,7 +126,7 @@ export default async function RestaurantOrderPage({ params }: Props) {
     }
   >;
   const locations = rawLocations.map(({ location_hours, ...loc }) => ({
-    ...loc,
+    ...(loc as Omit<Location, "opening_hours">),
     opening_hours:
       location_hours?.map((h) => ({
         day: h.day,
@@ -157,7 +134,7 @@ export default async function RestaurantOrderPage({ params }: Props) {
         close: h.close_time?.slice(0, 5),
         closed: h.is_closed || undefined,
       })) ?? [],
-  }));
+  })) as unknown as Location[];
   const locationIds = (locationsResult.data ?? []).map((l) => l.id);
 
   const [
@@ -166,9 +143,9 @@ export default async function RestaurantOrderPage({ params }: Props) {
     categoryAvailabilityResult,
     availabilityResult,
     menuItemsResult,
-    ingredientsResult,
+    optionGroupsResult,
+    optionGroupChoicesResult,
     allergensResult,
-    addOnsResult,
     allAllergensResult,
     overridesResult,
   ] = await Promise.all([
@@ -202,21 +179,21 @@ export default async function RestaurantOrderPage({ params }: Props) {
       .eq("is_available", true)
       .order("name", { ascending: true }),
     supabase
-      .from("menu_item_ingredients")
-      .select("menu_item_id, ingredient_id, ingredients(name, name_no, name_sv, name_da)")
+      .from("menu_item_option_groups")
+      .select(
+        "id, menu_item_id, option_group_id, sort_order, is_required, is_multi_select, option_groups!inner(id, name, name_no, name_sv, name_da, description, description_no, description_sv, description_da, is_required, is_multi_select, min_select, max_select)",
+      )
       .eq("restaurant_id", restaurantId)
-      .eq("is_removable", true)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("menu_item_option_group_choices")
+      .select(
+        "menu_item_option_group_id, option_group_choice_id, sort_order, option_group_choices!inner(id, name, name_no, name_sv, name_da, price_modifier_type, price_modifier, sort_order)",
+      )
       .order("sort_order", { ascending: true }),
     supabase
       .from("menu_item_allergens")
       .select("menu_item_id, allergen_id, allergens(name, name_no, name_sv, name_da)")
-      .eq("restaurant_id", restaurantId)
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("menu_item_add_on_options")
-      .select(
-        "menu_item_id, add_on_option_id, add_on_options(name, price, name_no, name_sv, name_da)",
-      )
       .eq("restaurant_id", restaurantId)
       .order("sort_order", { ascending: true }),
     supabase
@@ -255,25 +232,113 @@ export default async function RestaurantOrderPage({ params }: Props) {
     name: item[`name_${locale}` as keyof MenuItemRow] ?? item.name,
     description: item[`description_${locale}` as keyof MenuItemRow] ?? item.description,
   }));
-  const ingredientsByItemId = ((ingredientsResult.data ?? []) as MenuItemIngredientRow[]).reduce(
-    (ingredients, row) => {
-      const ingredient = firstRelation(row.ingredients) as IngredientRelation | null;
+  interface OptionGroupRow {
+    id: string;
+    menu_item_id: string;
+    option_group_id: string;
+    sort_order: number;
+    is_required: boolean | null;
+    is_multi_select: boolean | null;
+    option_groups: OptionGroupRelation;
+  }
 
-      if (!ingredient) {
-        return ingredients;
-      }
+  interface OptionGroupChoiceRow {
+    menu_item_option_group_id: string;
+    option_group_choice_id: string;
+    sort_order: number;
+    option_group_choices: OptionGroupChoiceRelation;
+  }
 
-      const itemIngredients = ingredients.get(row.menu_item_id) ?? [];
-      itemIngredients.push({
-        id: row.ingredient_id,
-        name: ingredient[`name_${locale}` as keyof IngredientRelation] ?? ingredient.name,
-      });
-      ingredients.set(row.menu_item_id, itemIngredients);
+  const rawOptionGroupData = (optionGroupsResult.data ?? []) as unknown as OptionGroupRow[];
+  const rawOptionGroupChoiceData = (optionGroupChoicesResult.data ??
+    []) as unknown as OptionGroupChoiceRow[];
 
-      return ingredients;
-    },
-    new Map<string, Array<{ id: string; name: string }>>(),
+  const groupsByItemAssignmentId = new Map(
+    rawOptionGroupData.map((row) => {
+      const group = row.option_groups as Record<string, unknown>;
+      const localizedName = (group[`name_${locale}`] as string | null) ?? (group.name as string);
+      const localizedDescription =
+        (group[`description_${locale}`] as string | null) ?? (group.description as string | null);
+      return [
+        row.id,
+        {
+          menuItemId: row.menu_item_id,
+          groupId: row.option_group_id,
+          group: {
+            id: group.id as string,
+            name: localizedName,
+            description: localizedDescription ?? undefined,
+            isRequired: row.is_required ?? (group.is_required as boolean),
+            isMultiSelect: row.is_multi_select ?? (group.is_multi_select as boolean),
+            minSelect: (group.min_select as number | null) ?? 0,
+            maxSelect: (group.max_select as number | null) ?? null,
+            sortOrder: row.sort_order,
+          },
+        },
+      ];
+    }),
   );
+  const choicesByAssignmentId = rawOptionGroupChoiceData.reduce((choices, row) => {
+    const c = row.option_group_choices as Record<string, unknown>;
+    const localizedName = (c[`name_${locale}`] as string | null) ?? (c.name as string);
+
+    const assignmentChoices = choices.get(row.menu_item_option_group_id) ?? [];
+    assignmentChoices.push({
+      id: row.option_group_choice_id,
+      name: localizedName,
+      priceModifierType: c.price_modifier_type as string as "increase" | "decrease" | "neutral",
+      priceModifier: Number(c.price_modifier),
+    });
+    choices.set(row.menu_item_option_group_id, assignmentChoices);
+
+    return choices;
+  }, new Map<string, Array<{ id: string; name: string; priceModifierType: "increase" | "decrease" | "neutral"; priceModifier: number }>>());
+  const optionGroupsByItemId = new Map<
+    string,
+    Array<{
+      id: string;
+      name: string;
+      description?: string;
+      isRequired: boolean;
+      isMultiSelect: boolean;
+      minSelect: number;
+      maxSelect: number | null;
+      choices: Array<{
+        id: string;
+        name: string;
+        priceModifierType: "increase" | "decrease" | "neutral";
+        priceModifier: number;
+      }>;
+    }>
+  >();
+
+  for (const [assignmentId, assignment] of groupsByItemAssignmentId) {
+    const itemGroups = optionGroupsByItemId.get(assignment.menuItemId) ?? [];
+    const existing = itemGroups.find((g) => g.id === assignment.groupId);
+
+    if (!existing) {
+      const groupChoices = (choicesByAssignmentId.get(assignmentId) ?? []).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+      itemGroups.push({
+        id: assignment.group.id,
+        name: assignment.group.name,
+        description: assignment.group.description ?? undefined,
+        isRequired: assignment.group.isRequired,
+        isMultiSelect: assignment.group.isMultiSelect,
+        minSelect: assignment.group.minSelect,
+        maxSelect: assignment.group.maxSelect,
+        choices: groupChoices,
+      });
+      optionGroupsByItemId.set(assignment.menuItemId, itemGroups);
+    } else {
+      const groupChoices = (choicesByAssignmentId.get(assignmentId) ?? []).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+      existing.choices.push(...groupChoices);
+    }
+  }
+
   const allergensByItemId = ((allergensResult.data ?? []) as MenuItemAllergenRow[]).reduce(
     (allergens, row) => {
       const allergen = firstRelation(row.allergens);
@@ -296,24 +361,6 @@ export default async function RestaurantOrderPage({ params }: Props) {
     },
     new Map<string, Array<{ id: string; name: string }>>(),
   );
-  const addOnsByItemId = ((addOnsResult.data ?? []) as MenuItemAddOnRow[]).reduce((addOns, row) => {
-    const addOnOption = firstRelation(row.add_on_options) as AddOnRelation | null;
-
-    if (!addOnOption) {
-      return addOns;
-    }
-
-    const itemAddOns = addOns.get(row.menu_item_id) ?? [];
-    itemAddOns.push({
-      id: row.add_on_option_id,
-      name:
-        (addOnOption[`name_${locale}` as keyof AddOnRelation] as string | null) ?? addOnOption.name,
-      price: Number(addOnOption.price),
-    });
-    addOns.set(row.menu_item_id, itemAddOns);
-
-    return addOns;
-  }, new Map<string, Array<{ id: string; name: string; price: number }>>());
   const subcategoriesByCategoryId = ((subcategoriesResult?.data ?? []) as SubcategoryRow[]).reduce(
     (subcategories, subcategory) => {
       const categorySubcategories = subcategories.get(subcategory.category_id) ?? [];
@@ -339,10 +386,9 @@ export default async function RestaurantOrderPage({ params }: Props) {
         .filter((item) => item.category_id === category.id)
         .map((item) => ({
           ...item,
-          addOnOptions: addOnsByItemId.get(item.id) ?? [],
+          optionGroups: optionGroupsByItemId.get(item.id) ?? [],
           allergens: allergensByItemId.get(item.id) ?? [],
           availableLocationIds: availableLocationIdsByItemId.get(item.id) ?? [],
-          ingredients: ingredientsByItemId.get(item.id) ?? [],
         }));
 
       return {
@@ -380,9 +426,9 @@ export default async function RestaurantOrderPage({ params }: Props) {
     subcategoriesResult?.error?.message ??
     availabilityResult?.error?.message ??
     menuItemsResult?.error?.message ??
-    ingredientsResult?.error?.message ??
-    allergensResult?.error?.message ??
-    addOnsResult?.error?.message;
+    optionGroupsResult?.error?.message ??
+    optionGroupChoicesResult?.error?.message ??
+    allergensResult?.error?.message;
 
   return (
     <main className="min-h-screen">

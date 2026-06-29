@@ -46,19 +46,6 @@ type MenuItemRow = {
   price: number | string;
 };
 
-type IngredientRelation = {
-  name: string;
-  name_no: string | null;
-  name_sv: string | null;
-  name_da: string | null;
-};
-
-type MenuItemIngredientRow = {
-  ingredient_id: string;
-  ingredients: IngredientRelation | IngredientRelation[] | null;
-  menu_item_id: string;
-};
-
 type AllergenFields = {
   name: string;
   name_no: string | null;
@@ -78,20 +65,6 @@ type AllergenRow = {
   name_no: string | null;
   name_sv: string | null;
   name_da: string | null;
-};
-
-type AddOnRelation = {
-  name: string;
-  name_no: string | null;
-  name_sv: string | null;
-  name_da: string | null;
-  price: number | string;
-};
-
-type MenuItemAddOnRow = {
-  add_on_options: AddOnRelation | AddOnRelation[] | null;
-  add_on_option_id: string;
-  menu_item_id: string;
 };
 
 type CategoryAvailabilityRow = {
@@ -160,9 +133,7 @@ export default async function MenuPreviewPage() {
     categoryAvailabilityResult,
     availabilityResult,
     menuItemsResult,
-    ingredientsResult,
     allergensResult,
-    addOnsResult,
     allAllergensResult,
     overridesResult,
   ] = await Promise.all([
@@ -195,21 +166,8 @@ export default async function MenuPreviewPage() {
       .eq("restaurant_id", restaurantId)
       .order("name", { ascending: true }),
     supabaseAdmin
-      .from("menu_item_ingredients")
-      .select("menu_item_id, ingredient_id, ingredients(name, name_no, name_sv, name_da)")
-      .eq("restaurant_id", restaurantId)
-      .eq("is_removable", true)
-      .order("sort_order", { ascending: true }),
-    supabaseAdmin
       .from("menu_item_allergens")
       .select("menu_item_id, allergen_id, allergens(name, name_no, name_sv, name_da)")
-      .eq("restaurant_id", restaurantId)
-      .order("sort_order", { ascending: true }),
-    supabaseAdmin
-      .from("menu_item_add_on_options")
-      .select(
-        "menu_item_id, add_on_option_id, add_on_options(name, price, name_no, name_sv, name_da)",
-      )
       .eq("restaurant_id", restaurantId)
       .order("sort_order", { ascending: true }),
     supabaseAdmin.from("allergens").select("id, name, name_no, name_sv, name_da").order("name", {
@@ -244,20 +202,6 @@ export default async function MenuPreviewPage() {
     name: item[`name_${locale}` as keyof MenuItemRow] ?? item.name,
     description: item[`description_${locale}` as keyof MenuItemRow] ?? item.description,
   }));
-  const ingredientsByItemId = ((ingredientsResult.data ?? []) as MenuItemIngredientRow[]).reduce(
-    (ingredients, row) => {
-      const ingredient = firstRelation(row.ingredients) as IngredientRelation | null;
-      if (!ingredient) return ingredients;
-      const itemIngredients = ingredients.get(row.menu_item_id) ?? [];
-      itemIngredients.push({
-        id: row.ingredient_id,
-        name: ingredient[`name_${locale}` as keyof IngredientRelation] ?? ingredient.name,
-      });
-      ingredients.set(row.menu_item_id, itemIngredients);
-      return ingredients;
-    },
-    new Map<string, Array<{ id: string; name: string }>>(),
-  );
   const allergensByItemId = ((allergensResult.data ?? []) as MenuItemAllergenRow[]).reduce(
     (allergens, row) => {
       const allergen = firstRelation(row.allergens);
@@ -275,19 +219,6 @@ export default async function MenuPreviewPage() {
     },
     new Map<string, Array<{ id: string; name: string }>>(),
   );
-  const addOnsByItemId = ((addOnsResult.data ?? []) as MenuItemAddOnRow[]).reduce((addOns, row) => {
-    const addOnOption = firstRelation(row.add_on_options) as AddOnRelation | null;
-    if (!addOnOption) return addOns;
-    const itemAddOns = addOns.get(row.menu_item_id) ?? [];
-    itemAddOns.push({
-      id: row.add_on_option_id,
-      name:
-        (addOnOption[`name_${locale}` as keyof AddOnRelation] as string | null) ?? addOnOption.name,
-      price: Number(addOnOption.price),
-    });
-    addOns.set(row.menu_item_id, itemAddOns);
-    return addOns;
-  }, new Map<string, Array<{ id: string; name: string; price: number }>>());
   const subcategoriesByCategoryId = ((subcategoriesResult?.data ?? []) as SubcategoryRow[]).reduce(
     (subcategories, subcategory) => {
       const categorySubcategories = subcategories.get(subcategory.category_id) ?? [];
@@ -312,10 +243,9 @@ export default async function MenuPreviewPage() {
         .filter((item) => item.category_id === category.id)
         .map((item) => ({
           ...item,
-          addOnOptions: addOnsByItemId.get(item.id) ?? [],
+          optionGroups: [],
           allergens: allergensByItemId.get(item.id) ?? [],
           availableLocationIds: availableLocationIdsByItemId.get(item.id) ?? [],
-          ingredients: ingredientsByItemId.get(item.id) ?? [],
         }));
 
       return {

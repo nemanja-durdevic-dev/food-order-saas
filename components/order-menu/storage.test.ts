@@ -14,15 +14,12 @@ const baseCartItem: CartItem = {
   image_url: null,
   price: 100,
   basePrice: 100,
-  cartKey: "item-1:::",
+  cartKey: "item-1:",
   quantity: 2,
-  removedIngredients: [],
-  drinkItems: [],
-  extraItems: [],
+  optionGroups: [],
+  selectedOptions: [],
   availableLocationIds: [],
-  addOnOptions: [],
   allergens: [],
-  ingredients: [],
   is_available: true,
 };
 
@@ -57,9 +54,7 @@ describe("readStoredCart / writeStoredCart", () => {
       {
         itemId: "item-1",
         quantity: 2,
-        drinkIds: [],
-        extraIds: [],
-        removedIngredientNames: [],
+        selectedOptionIds: [],
       },
     ]);
   });
@@ -68,14 +63,14 @@ describe("readStoredCart / writeStoredCart", () => {
     const customized: CartItem = {
       ...baseCartItem,
       quantity: 1,
-      removedIngredients: ["Onion"],
-      extraItems: [{ id: "e1", name: "Bacon", price: 15 }],
-      drinkItems: [
+      selectedOptions: [
         {
-          ...baseCartItem,
-          id: "d1",
-          name: "Cola",
-          price: 25,
+          groupId: "g1",
+          groupName: "Toppings",
+          choiceId: "c1",
+          choiceName: "Onion",
+          priceModifierType: "neutral",
+          priceModifier: 0,
         },
       ],
     };
@@ -87,9 +82,7 @@ describe("readStoredCart / writeStoredCart", () => {
       {
         itemId: "item-1",
         quantity: 1,
-        drinkIds: ["d1"],
-        extraIds: ["e1"],
-        removedIngredientNames: ["Onion"],
+        selectedOptionIds: ["c1"],
       },
     ]);
   });
@@ -116,8 +109,8 @@ describe("readStoredCart / writeStoredCart", () => {
     const data = {
       version: 1,
       items: [
-        { itemId: "valid", quantity: 1, drinkIds: [], extraIds: [], removedIngredientNames: [] },
-        { itemId: 123, quantity: 1, drinkIds: [], extraIds: [], removedIngredientNames: [] },
+        { itemId: "valid", quantity: 1, selectedOptionIds: [] },
+        { itemId: 123, quantity: 1, selectedOptionIds: [] },
       ],
     };
     store["food-app:cart:v1"] = JSON.stringify(data);

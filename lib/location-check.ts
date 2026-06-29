@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 type OpeningHour = {
   day: number;
   closed?: true;
@@ -79,31 +81,7 @@ export async function assertLocationOpen(params: {
   orderTiming: "asap" | "preorder";
   preorderDate?: string;
   preorderTime?: string;
-  supabaseAdmin: {
-    from: (table: string) => {
-      select: (columns: string) => {
-        eq: (
-          column: string,
-          value: string,
-        ) => {
-          maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
-          gte: (
-            column: string,
-            value: string,
-          ) => {
-            lte: (
-              column: string,
-              value: string,
-            ) => {
-              select: (columns: string) => {
-                eq: (column: string, value: string) => Promise<{ data: unknown; error: unknown }>;
-              };
-            };
-          };
-        };
-      };
-    };
-  };
+  supabaseAdmin: SupabaseClient;
 }): Promise<{ allowed: false; error: string } | { allowed: true; restaurantId: string }> {
   const { data: rawLocation } = await params.supabaseAdmin
     .from("locations")
@@ -147,12 +125,12 @@ export async function assertLocationOpen(params: {
     return { allowed: false, error: "Preorder date and time are required" };
   }
 
-  const { data: rawOverrides } = await params.supabaseAdmin
+  const { data: rawOverrides } = (await params.supabaseAdmin
     .from("location_hours_overrides")
     .select("date, is_closed, open_time, close_time")
     .eq("location_id", params.locationId)
     .gte("date", params.preorderDate)
-    .lte("date", params.preorderDate);
+    .lte("date", params.preorderDate)) as { data: unknown; error: unknown };
 
   const overrides = (rawOverrides as HoursOverride[] | null) ?? [];
 

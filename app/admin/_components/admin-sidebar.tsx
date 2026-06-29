@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, Home, LogOut, Menu, X } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { Eye, LogOut, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { adminResources } from "@/lib/admin/resources";
@@ -16,7 +15,6 @@ type AdminSidebarProps = {
 };
 
 export function AdminSidebar({ activeSlug, breadcrumbItems }: AdminSidebarProps) {
-  const pathname = usePathname();
   const supabase = createClient();
   const [expanded, setExpanded] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -35,7 +33,6 @@ export function AdminSidebar({ activeSlug, breadcrumbItems }: AdminSidebarProps)
   }
 
   const collapsed = !expanded;
-  const overviewActive = pathname === "/admin";
   const groupedResources = adminResources.reduce(
     (groups, resource) => {
       const groupName = resource.group ?? "";
@@ -56,21 +53,6 @@ export function AdminSidebar({ activeSlug, breadcrumbItems }: AdminSidebarProps)
     return (
       <>
         <div className="mb-6 flex min-h-12 items-start justify-between">
-          <Link
-            className={`flex items-center gap-3 rounded-md py-2 text-sm font-medium transition-colors ${
-              isCollapsed ? "justify-center px-2" : "px-2"
-            } ${
-              overviewActive
-                ? "bg-foreground text-background"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-            href="/admin"
-            onClick={onNavigate}
-            title={isCollapsed ? "Overview" : undefined}
-          >
-            <Home className="size-5 shrink-0" />
-            {!isCollapsed ? <span>Overview</span> : null}
-          </Link>
           {!isCollapsed ? (
             <button
               className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
@@ -89,7 +71,7 @@ export function AdminSidebar({ activeSlug, breadcrumbItems }: AdminSidebarProps)
               {group.name ? (
                 <p
                   aria-hidden={isCollapsed}
-                  className={`mb-1 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground ${
+                  className={`mb-1 px-3 text-xs font-semibold uppercase tracking-wide text-foreground ${
                     isCollapsed ? "invisible" : ""
                   }`}
                 >
@@ -106,9 +88,7 @@ export function AdminSidebar({ activeSlug, breadcrumbItems }: AdminSidebarProps)
                     className={`flex items-center gap-3 rounded-md py-2 font-medium transition-colors ${
                       isCollapsed ? "justify-center px-2" : "px-3"
                     } ${
-                      isActive
-                        ? "bg-foreground text-background"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      isActive ? "bg-black/10 text-foreground" : "text-foreground hover:bg-muted"
                     }`}
                     href={`/admin/${resource.slug}`}
                     key={resource.slug}
@@ -125,7 +105,7 @@ export function AdminSidebar({ activeSlug, breadcrumbItems }: AdminSidebarProps)
         </nav>
 
         <a
-          className={`mt-4 flex items-center gap-3 rounded-md py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ${
+          className={`mt-4 flex items-center gap-3 rounded-md py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted ${
             isCollapsed ? "justify-center px-2" : "px-3"
           }`}
           href="/admin/menu-preview"
@@ -138,7 +118,7 @@ export function AdminSidebar({ activeSlug, breadcrumbItems }: AdminSidebarProps)
         </a>
 
         <button
-          className={`mt-auto flex items-center gap-3 rounded-md py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-destructive ${
+          className={`mt-auto flex items-center gap-3 rounded-md py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-destructive ${
             isCollapsed ? "justify-center px-2" : "px-3"
           }`}
           onClick={handleSignOut}
@@ -180,7 +160,7 @@ export function AdminSidebar({ activeSlug, breadcrumbItems }: AdminSidebarProps)
       ) : null}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card px-3 py-5 shadow-sm transition-transform duration-200 lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-background px-3 py-5 shadow-sm transition-transform duration-200 lg:hidden ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -193,7 +173,7 @@ export function AdminSidebar({ activeSlug, breadcrumbItems }: AdminSidebarProps)
             setExpanded(false);
           }
         }}
-        className={`fixed inset-y-0 left-0 z-30 hidden h-screen flex-col border-r border-border bg-card px-3 py-5 shadow-sm transition-[width] duration-200 lg:flex ${
+        className={`fixed left-0 z-30 hidden h-[calc(100vh-3.5rem)] flex-col border-r border-border bg-background px-3 py-5 shadow-sm transition-[width] duration-200 lg:flex top-14 ${
           collapsed ? "w-16" : "w-64"
         }`}
         onFocus={() => setExpanded(true)}

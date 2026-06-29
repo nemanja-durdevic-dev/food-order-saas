@@ -48,7 +48,7 @@ export function LocationHoursOverridesSection({
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
-  function handleAdd(event: React.FormEvent<HTMLDivElement>) {
+  function handleAdd(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     if (!formRef.current) return;
 

@@ -17,26 +17,6 @@ type OrderItem = {
   created_at: string;
 };
 
-type Order = {
-  id: string;
-  order_code: string | null;
-  status: string;
-  payment_status: string;
-  subtotal: number;
-  total: number;
-  customer_notes: string | null;
-  order_timing: string;
-  preorder_date: string | null;
-  preorder_time: string | null;
-  stripe_session_id: string | null;
-  vipps_payment_reference: string | null;
-  expected_ready_at: string | null;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-  location_id: string | null;
-};
-
 type Props = {
   params: Promise<{ id: string }>;
 };

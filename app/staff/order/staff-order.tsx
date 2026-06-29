@@ -1,12 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Loader2, Minus, PackageOpen, Plus, ShoppingBasket, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase-browser";
 import { ItemDetailsDialog } from "@/components/order-menu/item-details-dialog";
-import type { MenuCategory, MenuItem, ModifierOption } from "@/components/order-menu/types";
+import type {
+  CartItem,
+  MenuCategory,
+  MenuItem,
+  SelectedOption,
+} from "@/components/order-menu/types";
 import {
   formatPrice,
   getCartCustomizationLabels,
@@ -24,14 +29,12 @@ type StaffOrderProps = {
 type CartEntry = {
   item: MenuItem;
   quantity: number;
-  removedIngredientNames: string[];
-  extraItems: ModifierOption[];
-  drinkItems: MenuItem[];
+  selectedOptions: SelectedOption[];
   cartKey: string;
   unitPrice: number;
 };
 
-const noopTranslator = (_key: string, _params?: Record<string, string | number>) => "";
+const noopTranslator = () => "";
 
 export function StaffOrder({ categories, locationId, locationName }: StaffOrderProps) {
   const [activeCategoryId, setActiveCategoryId] = useState(categories[0]?.id ?? "");
@@ -46,35 +49,40 @@ export function StaffOrder({ categories, locationId, locationName }: StaffOrderP
 
   // Dialog state
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [selectedDrinkIds, setSelectedDrinkIds] = useState<string[]>([]);
-  const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([]);
-  const [selectedRemovedIngredientIds, setSelectedRemovedIngredientIds] = useState<string[]>([]);
+  const [selectedChoicesByGroup, setSelectedChoicesByGroup] = useState<Record<string, string[]>>(
+    {},
+  );
   const [modalQuantity, setModalQuantity] = useState(1);
   const [isDialogClosing, setIsDialogClosing] = useState(false);
   const [editingCartKey, setEditingCartKey] = useState<string | null>(null);
 
-  const drinkOptions = categories
-    .filter((cat) => /drink|drikke|brus|soda/i.test(cat.name))
-    .flatMap((cat) => cat.menu_items);
-
   const cartQuantity = cart.reduce((sum, entry) => sum + entry.quantity, 0);
   const cartSubtotal = cart.reduce((sum, entry) => sum + entry.unitPrice * entry.quantity, 0);
 
-  const selectedRemovedIngredientNames = (selectedItem?.ingredients ?? [])
-    .filter((ingredient) => selectedRemovedIngredientIds.includes(ingredient.id))
-    .map((ingredient) => ingredient.name);
-
-  const selectedExtraOptions =
-    selectedItem?.addOnOptions.filter((option) => selectedExtraIds.includes(option.id)) ?? [];
-
-  const selectedDrinkOptions = drinkOptions.filter((drink) => selectedDrinkIds.includes(drink.id));
+  const selectedOptions: SelectedOption[] = [];
+  if (selectedItem) {
+    for (const group of selectedItem.optionGroups) {
+      const selectedIds = selectedChoicesByGroup[group.id] ?? [];
+      for (const choiceId of selectedIds) {
+        const choice = group.choices.find((c) => c.id === choiceId);
+        if (choice) {
+          selectedOptions.push({
+            groupId: group.id,
+            groupName: group.name,
+            choiceId: choice.id,
+            choiceName: choice.name,
+            priceModifierType: choice.priceModifierType,
+            priceModifier: choice.priceModifier,
+          });
+        }
+      }
+    }
+  }
 
   const selectedCustomizationKey = selectedItem
     ? getCustomizationKey(
         selectedItem.id,
-        selectedRemovedIngredientNames,
-        selectedExtraIds,
-        selectedDrinkIds,
+        selectedOptions.map((opt) => opt.choiceId),
       )
     : "";
 
@@ -82,21 +90,32 @@ export function StaffOrder({ categories, locationId, locationName }: StaffOrderP
     ? cart.find((entry) => entry.cartKey === selectedCustomizationKey)
     : undefined;
 
-  const selectedUnitPrice = selectedItem
-    ? getCustomizedPrice(selectedItem, selectedExtraOptions, selectedDrinkOptions)
-    : 0;
+  const selectedUnitPrice = selectedItem ? getCustomizedPrice(selectedItem, selectedOptions) : 0;
 
   const selectedActionPrice =
     editingCartKey || selectedCartItem ? selectedUnitPrice : selectedUnitPrice * modalQuantity;
 
-  const toggleSelection = useCallback(
-    (value: string, setValues: (updater: (currentValues: string[]) => string[]) => void) => {
-      setValues((prev) =>
-        prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
-      );
-    },
-    [],
-  );
+  function handleGroupSelection(groupId: string, choiceId: string) {
+    setSelectedChoicesByGroup((current) => {
+      const currentSelection = current[groupId] ?? [];
+      const group = selectedItem?.optionGroups.find((g) => g.id === groupId);
+      if (!group) return current;
+      if (group.isMultiSelect) {
+        const isSelected = currentSelection.includes(choiceId);
+        return {
+          ...current,
+          [groupId]: isSelected
+            ? currentSelection.filter((id) => id !== choiceId)
+            : [...currentSelection, choiceId],
+        };
+      }
+      const isSelected = currentSelection.includes(choiceId);
+      return {
+        ...current,
+        [groupId]: isSelected ? [] : [choiceId],
+      };
+    });
+  }
 
   // Scroll spy — auto-highlight category based on scroll position
   useEffect(() => {
@@ -150,9 +169,7 @@ export function StaffOrder({ categories, locationId, locationName }: StaffOrderP
 
   function openItemDialog(item: MenuItem) {
     setSelectedItem(item);
-    setSelectedDrinkIds([]);
-    setSelectedExtraIds([]);
-    setSelectedRemovedIngredientIds([]);
+    setSelectedChoicesByGroup({});
     setModalQuantity(1);
     setEditingCartKey(null);
     setIsDialogClosing(false);
@@ -169,23 +186,17 @@ export function StaffOrder({ categories, locationId, locationName }: StaffOrderP
   function addToCart(
     item: MenuItem,
     options: {
-      drinkItems?: MenuItem[];
-      extraItems?: ModifierOption[];
-      removedIngredientNames?: string[];
+      selectedOptions?: SelectedOption[];
       quantity?: number;
     } = {},
   ) {
+    const opts = options.selectedOptions ?? [];
     const quantity = options.quantity ?? 1;
-    const removedIngredientNames = options.removedIngredientNames ?? [];
-    const extraItems = options.extraItems ?? [];
-    const drinkItems = options.drinkItems ?? [];
     const cartKey = getCustomizationKey(
       item.id,
-      removedIngredientNames,
-      extraItems.map((e) => e.id),
-      drinkItems.map((d) => d.id),
+      opts.map((opt) => opt.choiceId),
     );
-    const unitPrice = getCustomizedPrice(item, extraItems, drinkItems);
+    const unitPrice = getCustomizedPrice(item, opts);
 
     setCart((prev) => {
       // If we're editing an existing cart entry, replace it
@@ -193,16 +204,7 @@ export function StaffOrder({ categories, locationId, locationName }: StaffOrderP
         return prev
           .map((entry) =>
             entry.cartKey === editingCartKey
-              ? {
-                  ...entry,
-                  item,
-                  quantity,
-                  removedIngredientNames,
-                  extraItems,
-                  drinkItems,
-                  cartKey,
-                  unitPrice,
-                }
+              ? { ...entry, item, quantity, selectedOptions: opts, cartKey, unitPrice }
               : entry,
           )
           .filter((entry) => entry.quantity > 0);
@@ -214,10 +216,7 @@ export function StaffOrder({ categories, locationId, locationName }: StaffOrderP
           entry.cartKey === cartKey ? { ...entry, quantity: entry.quantity + quantity } : entry,
         );
       }
-      return [
-        ...prev,
-        { item, quantity, removedIngredientNames, extraItems, drinkItems, cartKey, unitPrice },
-      ];
+      return [...prev, { item, quantity, selectedOptions: opts, cartKey, unitPrice }];
     });
 
     if (selectedItem) closeItemDialog();
@@ -228,7 +227,7 @@ export function StaffOrder({ categories, locationId, locationName }: StaffOrderP
   }
 
   function defaultCartKey(item: MenuItem) {
-    return getCustomizationKey(item.id, [], [], []);
+    return getCustomizationKey(item.id, []);
   }
 
   function quickDecrement(item: MenuItem) {
@@ -270,9 +269,7 @@ export function StaffOrder({ categories, locationId, locationName }: StaffOrderP
   function handleAddToCart() {
     if (!selectedItem) return;
     addToCart(selectedItem, {
-      drinkItems: selectedDrinkOptions,
-      extraItems: selectedExtraOptions,
-      removedIngredientNames: selectedRemovedIngredientNames,
+      selectedOptions,
       quantity: modalQuantity,
     });
   }
@@ -280,9 +277,7 @@ export function StaffOrder({ categories, locationId, locationName }: StaffOrderP
   function handleUpdateCartItem() {
     if (!selectedItem) return;
     addToCart(selectedItem, {
-      drinkItems: selectedDrinkOptions,
-      extraItems: selectedExtraOptions,
-      removedIngredientNames: selectedRemovedIngredientNames,
+      selectedOptions,
       quantity: selectedCartItem?.quantity,
     });
   }
@@ -308,9 +303,13 @@ export function StaffOrder({ categories, locationId, locationName }: StaffOrderP
           quantity: entry.quantity,
           unitPrice: entry.unitPrice,
           total: entry.unitPrice * entry.quantity,
-          removedIngredients: entry.removedIngredientNames,
-          addOns: entry.extraItems.map((e) => ({ id: e.id, name: e.name, price: e.price })),
-          drinks: entry.drinkItems.map((d) => ({ id: d.id, name: d.name, price: Number(d.price) })),
+          removedIngredients: entry.selectedOptions
+            .filter((o) => o.priceModifierType === "decrease")
+            .map((o) => o.choiceName),
+          addOns: entry.selectedOptions
+            .filter((o) => o.priceModifierType === "increase" || o.priceModifierType === "neutral")
+            .map((o) => ({ id: o.choiceId, name: o.choiceName, price: o.priceModifier })),
+          drinks: [],
         })),
         locationId,
         subtotal: cartSubtotal,
@@ -447,12 +446,10 @@ export function StaffOrder({ categories, locationId, locationName }: StaffOrderP
                     ...entry.item,
                     basePrice: entry.item.price,
                     cartKey: entry.cartKey,
-                    drinkItems: entry.drinkItems,
-                    extraItems: entry.extraItems,
                     quantity: entry.quantity,
-                    removedIngredients: entry.removedIngredientNames,
+                    selectedOptions: entry.selectedOptions,
                     price: entry.unitPrice,
-                  } as never,
+                  } as CartItem,
                   noopTranslator,
                 );
 
@@ -544,8 +541,8 @@ export function StaffOrder({ categories, locationId, locationName }: StaffOrderP
       {/* Customization dialog */}
       {selectedItem ? (
         <ItemDetailsDialog
+          currency="NOK"
           decrementCartItem={(key) => decrement(key)}
-          drinkOptions={drinkOptions}
           editingCartKey={editingCartKey}
           incrementCartItem={(key) => increment(key)}
           isClosing={isDialogClosing}
@@ -553,6 +550,7 @@ export function StaffOrder({ categories, locationId, locationName }: StaffOrderP
           onAddToCart={handleAddToCart}
           onClose={closeItemDialog}
           onUpdateCartItem={handleUpdateCartItem}
+          onGroupSelection={handleGroupSelection}
           selectedActionPrice={selectedActionPrice}
           selectedCartItem={
             selectedCartItem
@@ -560,24 +558,16 @@ export function StaffOrder({ categories, locationId, locationName }: StaffOrderP
                   ...selectedCartItem.item,
                   basePrice: selectedCartItem.item.price,
                   cartKey: selectedCartItem.cartKey,
-                  drinkItems: selectedCartItem.drinkItems,
-                  extraItems: selectedCartItem.extraItems,
                   quantity: selectedCartItem.quantity,
-                  removedIngredients: selectedCartItem.removedIngredientNames,
+                  selectedOptions: selectedCartItem.selectedOptions,
                   price: selectedCartItem.unitPrice,
-                } as never)
+                } as CartItem)
               : undefined
           }
+          selectedChoicesByGroup={selectedChoicesByGroup}
           selectedCustomizationKey={selectedCustomizationKey}
-          selectedDrinkIds={selectedDrinkIds}
-          selectedExtraIds={selectedExtraIds}
           selectedItem={selectedItem}
-          selectedRemovedIngredientIds={selectedRemovedIngredientIds}
           setModalQuantity={setModalQuantity}
-          setSelectedDrinkIds={setSelectedDrinkIds}
-          setSelectedExtraIds={setSelectedExtraIds}
-          setSelectedRemovedIngredientIds={setSelectedRemovedIngredientIds}
-          toggleSelection={toggleSelection}
         />
       ) : null}
     </div>

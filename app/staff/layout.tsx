@@ -51,7 +51,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
     <>
       {/* Header */}
       <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} mb-6`}>
-        {!collapsed && <h2 className="font-bold text-lg">Kitchen</h2>}
+        {!collapsed && <h2 className="font-bold text-lg text-foreground">Kitchen</h2>}
         <button
           onClick={toggleCollapsed}
           className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors hidden lg:block"
@@ -82,8 +82,8 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                 collapsed ? "justify-center px-2" : ""
               } ${
                 isActive
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-black/10 text-primary font-semibold"
+                  : "text-foreground hover:bg-muted"
               }`}
               href={item.href}
               key={item.href}
@@ -100,7 +100,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
       {/* Sign out at bottom */}
       <div className="mt-auto">
         <button
-          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-destructive ${
+          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-muted hover:text-destructive ${
             collapsed ? "justify-center px-2" : ""
           }`}
           onClick={handleSignOut}
@@ -130,7 +130,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
       {/* Mobile drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-card p-3 transition-transform duration-200 lg:static lg:z-auto lg:shrink-0 lg:overflow-hidden ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-background p-3 transition-transform duration-200 lg:static lg:z-auto lg:shrink-0 lg:overflow-hidden ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0 ${collapsed ? "lg:w-16" : "lg:w-56"}`}
       >

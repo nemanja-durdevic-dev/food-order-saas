@@ -191,9 +191,14 @@ export function CartPanel({
         unitPrice: getPriceValue(item.price),
         total: getPriceValue(item.price) * item.quantity,
         customizations: {
-          removedIngredients: item.removedIngredients,
-          addOns: item.extraItems?.map((e) => ({ id: e.id, name: e.name, price: e.price })),
-          drinks: item.drinkItems?.map((d) => ({ id: d.id, name: d.name, price: Number(d.price) })),
+          selectedOptions: item.selectedOptions.map((opt) => ({
+            groupId: opt.groupId,
+            groupName: opt.groupName,
+            choiceId: opt.choiceId,
+            choiceName: opt.choiceName,
+            priceModifierType: opt.priceModifierType,
+            priceModifier: opt.priceModifier,
+          })),
         },
       }));
 

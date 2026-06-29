@@ -41,9 +41,14 @@ export type OrderItemData = {
   unit_price: number;
   total: number;
   customizations?: {
-    removedIngredients?: string[];
-    addOns?: Array<{ id: string; name: string; price: number }>;
-    drinks?: Array<{ id: string; name: string; price: number }>;
+    selectedOptions?: Array<{
+      groupId: string;
+      groupName: string;
+      choiceId: string;
+      choiceName: string;
+      priceModifierType: string;
+      priceModifier: number;
+    }>;
   };
 };
 
@@ -129,7 +134,7 @@ function OrderStatusInner({
       isMounted.current = false;
       clearUnpaidTimer();
     };
-  }, []);
+  }, [initialOrder.status, initialOrder.payment_status, verifyPayment, clearUnpaidTimer]);
 
   useEffect(() => {
     const channel = supabase
@@ -178,11 +183,9 @@ function OrderStatusInner({
     const cartItems = initialItems
       .filter((item) => item.menu_item_id)
       .map((item) => ({
-        drinkIds: item.customizations?.drinks?.map((d) => d.id) ?? [],
-        extraIds: item.customizations?.addOns?.map((a) => a.id) ?? [],
         itemId: item.menu_item_id,
         quantity: item.quantity,
-        removedIngredientNames: item.customizations?.removedIngredients ?? [],
+        selectedOptionIds: item.customizations?.selectedOptions?.map((o) => o.choiceId) ?? [],
       }));
 
     try {
@@ -214,14 +217,12 @@ function OrderStatusInner({
 
     function itemCustomizations(item: OrderItemData) {
       const parts: string[] = [];
-      if (item.customizations?.removedIngredients?.length) {
-        parts.push(`No ${item.customizations.removedIngredients.join(", ")}`);
-      }
-      if (item.customizations?.addOns?.length) {
-        parts.push(`+ ${item.customizations.addOns.map((a) => a.name).join(", ")}`);
-      }
-      if (item.customizations?.drinks?.length) {
-        parts.push(`Drink: ${item.customizations.drinks.map((d) => d.name).join(", ")}`);
+      for (const opt of item.customizations?.selectedOptions ?? []) {
+        if (opt.priceModifierType === "increase") {
+          parts.push(`+ ${opt.choiceName}`);
+        } else {
+          parts.push(opt.choiceName);
+        }
       }
       return parts.length ? ` — ${parts.join("; ")}` : "";
     }
@@ -416,19 +417,16 @@ function OrderStatusInner({
                         </span>
                         <span className="shrink-0 font-semibold">{item.total} kr</span>
                       </div>
-                      {item.customizations && (
+                      {item.customizations?.selectedOptions?.length ? (
                         <div className="ml-5 mt-0.5 space-y-0.5 text-xs text-muted-foreground">
-                          {item.customizations.removedIngredients?.length ? (
-                            <p>No {item.customizations.removedIngredients.join(", ")}</p>
-                          ) : null}
-                          {item.customizations.addOns?.length ? (
-                            <p>+ {item.customizations.addOns.map((a) => a.name).join(", ")}</p>
-                          ) : null}
-                          {item.customizations.drinks?.length ? (
-                            <p>Drink: {item.customizations.drinks.map((d) => d.name).join(", ")}</p>
-                          ) : null}
+                          {item.customizations.selectedOptions.map((opt) => (
+                            <p key={opt.choiceId}>
+                              {opt.priceModifierType === "increase" ? "+ " : ""}
+                              {opt.choiceName}
+                            </p>
+                          ))}
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   ))}
                 </div>

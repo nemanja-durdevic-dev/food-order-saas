@@ -263,26 +263,6 @@ from unavailable_items
 where menu_item_locations.menu_item_id = unavailable_items.menu_item_id
   and menu_item_locations.location_id = unavailable_items.location_id;
 
-insert into public.add_on_options (name, name_no, name_sv, name_da, price, is_available, sort_order)
-select option.name, option.name_no, option.name_sv, option.name_da, option.price, true, option.sort_order
-from (
-  values
-    ('Extra cheese', 'Ekstra ost', 'Extra ost', 'Ekstra ost', 15.00, 10),
-    ('Bacon', 'Bacon', 'Bacon', 'Bacon', 25.00, 20),
-    ('Extra beef patty', 'Ekstra biffpatty', 'Extra nötköttsbiff', 'Ekstra bøfpatty', 45.00, 30),
-    ('Extra crispy chicken', 'Ekstra sprø kylling', 'Extra krispig kyckling', 'Ekstra sprød kylling', 45.00, 40),
-    ('Fries', 'Pommes frites', 'Pommes frites', 'Pommes frites', 39.00, 50),
-    ('Garlic dip', 'Hvitløksdip', 'Vitlöksdipp', 'Hvidløgsdip', 15.00, 60),
-    ('Chipotle mayo', 'Chipotlemayo', 'Chipotlemajo', 'Chipotlemayo', 15.00, 70)
-) as option(name, name_no, name_sv, name_da, price, sort_order)
-on conflict (name) do update set
-  name_no = excluded.name_no,
-  name_sv = excluded.name_sv,
-  name_da = excluded.name_da,
-  price = excluded.price,
-  is_available = excluded.is_available,
-  sort_order = excluded.sort_order;
-
 with restaurant as (
   insert into public.restaurants (name, slug, description, brand_color, status)
   values ('Burger House', 'burger-house', 'Fresh burgers, bowls, sides, and pickup favorites.', '#f97316', 'active')
@@ -292,84 +272,160 @@ with restaurant as (
     brand_color = excluded.brand_color,
     status = excluded.status
   returning id
-), item_add_ons(item_name, add_on_name, sort_order) as (
+), group_seed(name, is_required, is_multi_select, sort_order) as (
   values
-    ('Classic Burger', 'Extra cheese', 10),
-    ('Classic Burger', 'Bacon', 20),
-    ('Classic Burger', 'Extra beef patty', 30),
-    ('Smash Double', 'Extra cheese', 10),
-    ('Smash Double', 'Bacon', 20),
-    ('Smash Double', 'Extra beef patty', 30),
-    ('Crispy Chicken Burger', 'Extra crispy chicken', 10),
-    ('Chicken Tenders', 'Garlic dip', 10),
-    ('Loaded Beef Bowl', 'Bacon', 10),
-    ('Crispy Chicken Bowl', 'Chipotle mayo', 10),
-    ('Kids Burger Meal', 'Extra cheese', 10),
-    ('Kids Fries', 'Garlic dip', 10)
+    ('Extras', false, true, 10),
+    ('Remove Ingredients', false, true, 20),
+    ('Add a Drink', false, false, 30)
 )
-insert into public.menu_item_add_on_options (restaurant_id, menu_item_id, add_on_option_id, sort_order)
-select restaurant.id, menu_items.id, add_on_options.id, item_add_ons.sort_order
+insert into public.option_groups (restaurant_id, name, is_required, is_multi_select, sort_order)
+select restaurant.id, group_seed.name, group_seed.is_required, group_seed.is_multi_select, group_seed.sort_order
 from restaurant
-join item_add_ons on true
-join public.menu_items on menu_items.restaurant_id = restaurant.id and menu_items.name = item_add_ons.item_name
-join public.add_on_options on add_on_options.name = item_add_ons.add_on_name
-on conflict (menu_item_id, add_on_option_id) do update set
+cross join group_seed
+on conflict (restaurant_id, name) do update set
+  is_required = excluded.is_required,
+  is_multi_select = excluded.is_multi_select,
+  sort_order = excluded.sort_order;
+
+with group_ids as (
+  select og.id, og.name
+  from public.restaurants r
+  join public.option_groups og on og.restaurant_id = r.id
+  where r.slug = 'burger-house'
+)
+insert into public.option_group_choices (option_group_id, name, price_modifier_type, price_modifier, sort_order)
+select group_ids.id, choice.name, choice.price_modifier_type, choice.price_modifier, choice.sort_order
+from group_ids
+cross join (
+  values
+    ('Extras', 'Extra cheese', 'increase', 15.00, 10),
+    ('Extras', 'Bacon', 'increase', 25.00, 20),
+    ('Extras', 'Extra beef patty', 'increase', 45.00, 30),
+    ('Extras', 'Extra crispy chicken', 'increase', 45.00, 40),
+    ('Extras', 'Fries', 'increase', 39.00, 50),
+    ('Extras', 'Garlic dip', 'increase', 15.00, 60),
+    ('Extras', 'Chipotle mayo', 'increase', 15.00, 70),
+    ('Remove Ingredients', 'No Beef patty', 'neutral', 0, 10),
+    ('Remove Ingredients', 'No Cheddar', 'neutral', 0, 20),
+    ('Remove Ingredients', 'No Lettuce', 'neutral', 0, 30),
+    ('Remove Ingredients', 'No Tomato', 'neutral', 0, 40),
+    ('Remove Ingredients', 'No Pickles', 'neutral', 0, 50),
+    ('Remove Ingredients', 'No Fried chicken', 'neutral', 0, 60),
+    ('Remove Ingredients', 'No Fries', 'neutral', 0, 70),
+    ('Remove Ingredients', 'No Rice', 'neutral', 0, 80),
+    ('Remove Ingredients', 'No Falafel', 'neutral', 0, 90),
+    ('Remove Ingredients', 'No Garlic dip', 'neutral', 0, 100),
+    ('Add a Drink', 'Cola', 'increase', 35.00, 10),
+    ('Add a Drink', 'Cola Zero', 'increase', 35.00, 20),
+    ('Add a Drink', 'House Lemonade', 'increase', 45.00, 30),
+    ('Add a Drink', 'Sparkling Water', 'increase', 32.00, 40)
+) as choice(group_name, name, price_modifier_type, price_modifier, sort_order)
+where group_ids.name = choice.group_name;
+
+with restaurant as (
+  select id from public.restaurants where slug = 'burger-house'
+), item_groups(item_name, group_name, sort_order) as (
+  values
+    ('Classic Burger', 'Extras', 10),
+    ('Classic Burger', 'Remove Ingredients', 20),
+    ('Classic Burger', 'Add a Drink', 30),
+    ('Smash Double', 'Extras', 10),
+    ('Smash Double', 'Add a Drink', 20),
+    ('BBQ Bacon Burger', 'Add a Drink', 10),
+    ('Veggie Halloumi Burger', 'Add a Drink', 10),
+    ('Crispy Chicken Burger', 'Extras', 10),
+    ('Crispy Chicken Burger', 'Remove Ingredients', 20),
+    ('Crispy Chicken Burger', 'Add a Drink', 30),
+    ('Hot Honey Chicken', 'Add a Drink', 10),
+    ('Chicken Tenders', 'Extras', 10),
+    ('Chicken Tenders', 'Remove Ingredients', 20),
+    ('Chicken Tenders', 'Add a Drink', 30),
+    ('Loaded Beef Bowl', 'Extras', 10),
+    ('Loaded Beef Bowl', 'Remove Ingredients', 20),
+    ('Loaded Beef Bowl', 'Add a Drink', 30),
+    ('Crispy Chicken Bowl', 'Extras', 10),
+    ('Crispy Chicken Bowl', 'Remove Ingredients', 20),
+    ('Crispy Chicken Bowl', 'Add a Drink', 30),
+    ('Green Falafel Bowl', 'Remove Ingredients', 10),
+    ('Green Falafel Bowl', 'Add a Drink', 20),
+    ('Kids Burger Meal', 'Extras', 10),
+    ('Kids Burger Meal', 'Add a Drink', 20),
+    ('Kids Tenders Meal', 'Add a Drink', 10),
+    ('Kids Fries', 'Extras', 10),
+    ('Kids Fries', 'Remove Ingredients', 20)
+)
+insert into public.menu_item_option_groups (restaurant_id, menu_item_id, option_group_id, sort_order)
+select restaurant.id, menu_items.id, option_groups.id, item_groups.sort_order
+from restaurant
+join item_groups on true
+join public.menu_items on menu_items.restaurant_id = restaurant.id and menu_items.name = item_groups.item_name
+join public.option_groups on option_groups.restaurant_id = restaurant.id and option_groups.name = item_groups.group_name
+on conflict (menu_item_id, option_group_id) do update set
   restaurant_id = excluded.restaurant_id,
   sort_order = excluded.sort_order;
 
-insert into public.ingredients (name, name_no, name_sv, name_da)
-values
-  ('Beef patty', 'Biffpatty', 'Nötköttsbiff', 'Bøfpatty'),
-  ('Cheddar', 'Cheddar', 'Cheddar', 'Cheddar'),
-  ('Lettuce', 'Salat', 'Sallad', 'Salat'),
-  ('Tomato', 'Tomat', 'Tomat', 'Tomat'),
-  ('Pickles', 'Sylteagurk', 'Pickles', 'Sylteagurk'),
-  ('Fried chicken', 'Fritert kylling', 'Friterad kyckling', 'Friteret kylling'),
-  ('Fries', 'Pommes frites', 'Pommes frites', 'Pommes frites'),
-  ('Rice', 'Ris', 'Ris', 'Ris'),
-  ('Falafel', 'Falafel', 'Falafel', 'Falafel'),
-  ('Garlic dip', 'Hvitløksdip', 'Vitlöksdipp', 'Hvidløgsdip')
-on conflict (name) do update set
-  name_no = excluded.name_no,
-  name_sv = excluded.name_sv,
-  name_da = excluded.name_da;
+with restaurant as (
+  select id from public.restaurants where slug = 'burger-house'
+), item_group_choices(item_name, group_name, choice_name, sort_order) as (
+  values
+    ('Classic Burger', 'Extras', 'Extra cheese', 10),
+    ('Classic Burger', 'Extras', 'Bacon', 20),
+    ('Classic Burger', 'Extras', 'Extra beef patty', 30),
+    ('Classic Burger', 'Remove Ingredients', 'No Beef patty', 10),
+    ('Classic Burger', 'Remove Ingredients', 'No Cheddar', 20),
+    ('Classic Burger', 'Remove Ingredients', 'No Lettuce', 30),
+    ('Classic Burger', 'Remove Ingredients', 'No Tomato', 40),
+    ('Classic Burger', 'Remove Ingredients', 'No Pickles', 50),
+    ('Smash Double', 'Extras', 'Extra cheese', 10),
+    ('Smash Double', 'Extras', 'Bacon', 20),
+    ('Smash Double', 'Extras', 'Extra beef patty', 30),
+    ('Crispy Chicken Burger', 'Extras', 'Extra crispy chicken', 10),
+    ('Crispy Chicken Burger', 'Remove Ingredients', 'No Fried chicken', 10),
+    ('Chicken Tenders', 'Extras', 'Garlic dip', 10),
+    ('Chicken Tenders', 'Remove Ingredients', 'No Fried chicken', 10),
+    ('Loaded Beef Bowl', 'Extras', 'Bacon', 10),
+    ('Loaded Beef Bowl', 'Remove Ingredients', 'No Beef patty', 10),
+    ('Loaded Beef Bowl', 'Remove Ingredients', 'No Fries', 20),
+    ('Crispy Chicken Bowl', 'Extras', 'Chipotle mayo', 10),
+    ('Crispy Chicken Bowl', 'Remove Ingredients', 'No Fried chicken', 10),
+    ('Crispy Chicken Bowl', 'Remove Ingredients', 'No Rice', 20),
+    ('Green Falafel Bowl', 'Remove Ingredients', 'No Falafel', 10),
+    ('Green Falafel Bowl', 'Remove Ingredients', 'No Rice', 20),
+    ('Kids Burger Meal', 'Extras', 'Extra cheese', 10),
+    ('Kids Fries', 'Extras', 'Garlic dip', 10),
+    ('Kids Fries', 'Remove Ingredients', 'No Fries', 10),
+    ('Kids Fries', 'Remove Ingredients', 'No Garlic dip', 20)
+)
+insert into public.menu_item_option_group_choices (menu_item_option_group_id, option_group_choice_id, sort_order)
+select miog.id, ogc.id, igc.sort_order
+from restaurant
+join item_group_choices igc on true
+join public.menu_items on menu_items.restaurant_id = restaurant.id and menu_items.name = igc.item_name
+join public.option_groups on option_groups.restaurant_id = restaurant.id and option_groups.name = igc.group_name
+join public.menu_item_option_groups miog on miog.menu_item_id = menu_items.id and miog.option_group_id = option_groups.id
+join public.option_group_choices ogc on ogc.option_group_id = option_groups.id and ogc.name = igc.choice_name
+on conflict (menu_item_option_group_id, option_group_choice_id) do update set
+  sort_order = excluded.sort_order;
 
 with restaurant as (
-  insert into public.restaurants (name, slug, description, brand_color, status)
-  values ('Burger House', 'burger-house', 'Fresh burgers, bowls, sides, and pickup favorites.', '#f97316', 'active')
-  on conflict (slug) do update set
-    name = excluded.name,
-    description = excluded.description,
-    brand_color = excluded.brand_color,
-    status = excluded.status
-  returning id
-), item_ingredients(item_name, ingredient_name, sort_order) as (
+  select id from public.restaurants where slug = 'burger-house'
+), add_drink_choices(item_name) as (
   values
-    ('Classic Burger', 'Beef patty', 10),
-    ('Classic Burger', 'Cheddar', 20),
-    ('Classic Burger', 'Lettuce', 30),
-    ('Classic Burger', 'Tomato', 40),
-    ('Classic Burger', 'Pickles', 50),
-    ('Crispy Chicken Burger', 'Fried chicken', 10),
-    ('Chicken Tenders', 'Fried chicken', 10),
-    ('Loaded Beef Bowl', 'Beef patty', 10),
-    ('Loaded Beef Bowl', 'Fries', 20),
-    ('Crispy Chicken Bowl', 'Fried chicken', 10),
-    ('Crispy Chicken Bowl', 'Rice', 20),
-    ('Green Falafel Bowl', 'Falafel', 10),
-    ('Green Falafel Bowl', 'Rice', 20),
-    ('Kids Fries', 'Fries', 10),
-    ('Kids Fries', 'Garlic dip', 20)
+    ('Classic Burger'), ('Smash Double'), ('BBQ Bacon Burger'), ('Veggie Halloumi Burger'),
+    ('Crispy Chicken Burger'), ('Hot Honey Chicken'), ('Chicken Tenders'),
+    ('Loaded Beef Bowl'), ('Crispy Chicken Bowl'), ('Green Falafel Bowl'),
+    ('Kids Burger Meal'), ('Kids Tenders Meal')
 )
-insert into public.menu_item_ingredients (restaurant_id, menu_item_id, ingredient_id, is_removable, sort_order)
-select restaurant.id, menu_items.id, ingredients.id, true, item_ingredients.sort_order
+insert into public.menu_item_option_group_choices (menu_item_option_group_id, option_group_choice_id, sort_order)
+select miog.id, ogc.id, drink.seq
 from restaurant
-join item_ingredients on true
-join public.menu_items on menu_items.restaurant_id = restaurant.id and menu_items.name = item_ingredients.item_name
-join public.ingredients on ingredients.name = item_ingredients.ingredient_name
-on conflict (menu_item_id, ingredient_id) do update set
-  restaurant_id = excluded.restaurant_id,
-  is_removable = excluded.is_removable,
+join add_drink_choices adc on true
+join public.menu_items on menu_items.restaurant_id = restaurant.id and menu_items.name = adc.item_name
+join public.option_groups on option_groups.restaurant_id = restaurant.id and option_groups.name = 'Add a Drink'
+join public.menu_item_option_groups miog on miog.menu_item_id = menu_items.id and miog.option_group_id = option_groups.id
+join public.option_group_choices ogc on ogc.option_group_id = option_groups.id
+join (values ('Cola', 10), ('Cola Zero', 20), ('House Lemonade', 30), ('Sparkling Water', 40)) as drink(name, seq) on drink.name = ogc.name
+on conflict (menu_item_option_group_id, option_group_choice_id) do update set
   sort_order = excluded.sort_order;
 
 insert into public.allergens (name, name_no, name_sv, name_da)

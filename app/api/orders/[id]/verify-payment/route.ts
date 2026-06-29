@@ -36,9 +36,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         return NextResponse.json({ error: "Stripe account not configured" }, { status: 500 });
       }
 
-      const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id, {
-        stripeAccount: restaurant.stripe_account_id,
-      });
+      const session = await stripe.checkout.sessions.retrieve(
+        order.stripe_session_id,
+        {},
+        { stripeAccount: restaurant.stripe_account_id },
+      );
 
       const isPaid = session.payment_status === "paid" || session.status === "complete";
 

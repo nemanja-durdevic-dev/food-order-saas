@@ -746,3 +746,17 @@ export async function deleteLocationHoursOverride(formData: FormData) {
   revalidatePath(`/admin/locations/edit?id=${encodeURIComponent(locationId)}`);
   return { success: true };
 }
+
+export async function addLocationHoursOverrideAction(
+  _state: { error?: string; success?: boolean } | null,
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> {
+  return addLocationHoursOverride(formData);
+}
+
+export async function deleteLocationHoursOverrideAction(
+  _state: { error?: string; success?: boolean } | null,
+  formData: FormData,
+): Promise<{ error?: string; success?: boolean }> {
+  return deleteLocationHoursOverride(formData);
+}

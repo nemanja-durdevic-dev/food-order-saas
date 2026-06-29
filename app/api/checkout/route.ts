@@ -13,9 +13,14 @@ type CartItemInput = {
   unitPrice: number;
   total: number;
   customizations?: {
-    removedIngredients?: string[];
-    addOns?: Array<{ id: string; name: string; price: number }>;
-    drinks?: Array<{ id: string; name: string; price: number }>;
+    selectedOptions?: Array<{
+      groupId: string;
+      groupName: string;
+      choiceId: string;
+      choiceName: string;
+      priceModifierType: string;
+      priceModifier: number;
+    }>;
   };
 };
 

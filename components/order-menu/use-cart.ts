@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import type { CartItem, Location, MenuCategory, MenuItem, ModifierOption } from "./types";
+import type { CartItem, Location, MenuCategory, MenuItem, SelectedOption } from "./types";
+import { getChoiceById } from "./storage";
 import { getCustomizationKey, getCustomizedPrice, getPriceValue } from "./utils";
 import { readStoredCart, writeStoredCart } from "./storage";
 
@@ -16,18 +17,10 @@ function getCartItemsFromStorage(categories: MenuCategory[]): Record<string, Car
   const menuItemsById = new Map(
     categories.flatMap((category) => category.menu_items.map((item) => [item.id, item] as const)),
   );
-  const drinkItemsById = new Map(
-    categories
-      .filter((category) => /drink|drikke|brus|soda/i.test(category.name))
-      .flatMap((category) => category.menu_items.map((item) => [item.id, item] as const)),
-  );
-  const extraItemsById = new Map(
-    categories.flatMap((category) =>
-      category.menu_items.flatMap((item) =>
-        item.addOnOptions.map((extra) => [extra.id, extra] as const),
-      ),
-    ),
-  );
+  const choicesByItemId = new Map<string, ReturnType<typeof getChoiceById>>();
+  for (const item of menuItemsById.values()) {
+    choicesByItemId.set(item.id, getChoiceById(item.optionGroups));
+  }
 
   return storedItems.reduce<Record<string, CartItem>>((cartItems, storedItem) => {
     const item = menuItemsById.get(storedItem.itemId);
@@ -36,32 +29,35 @@ function getCartItemsFromStorage(categories: MenuCategory[]): Record<string, Car
       return cartItems;
     }
 
-    const drinkItems = storedItem.drinkIds.flatMap((drinkId) => {
-      const drink = drinkItemsById.get(drinkId);
+    const choiceMap = choicesByItemId.get(item.id) ?? new Map();
+    const selectedOptions: SelectedOption[] = [];
 
-      return drink ? [drink] : [];
-    });
-    const extraItems = storedItem.extraIds.flatMap((extraId) => {
-      const extra = extraItemsById.get(extraId);
+    for (const choiceId of storedItem.selectedOptionIds) {
+      const found = choiceMap.get(choiceId);
+      if (found) {
+        selectedOptions.push({
+          groupId: found.group.id,
+          groupName: found.group.name,
+          choiceId: found.choice.id,
+          choiceName: found.choice.name,
+          priceModifierType: found.choice.priceModifierType,
+          priceModifier: found.choice.priceModifier,
+        });
+      }
+    }
 
-      return extra ? [extra] : [];
-    });
     const cartKey = getCustomizationKey(
       item.id,
-      storedItem.removedIngredientNames,
-      extraItems.map((extra) => extra.id),
-      drinkItems.map((drink) => drink.id),
+      selectedOptions.map((opt) => opt.choiceId),
     );
 
     cartItems[cartKey] = {
       ...item,
       basePrice: item.price,
       cartKey,
-      drinkItems,
-      extraItems,
-      price: getCustomizedPrice(item, extraItems, drinkItems),
+      price: getCustomizedPrice(item, selectedOptions),
       quantity: (cartItems[cartKey]?.quantity ?? 0) + storedItem.quantity,
-      removedIngredients: storedItem.removedIngredientNames,
+      selectedOptions,
     };
 
     return cartItems;
@@ -75,14 +71,9 @@ export type CartState = {
   cartSubtotal: number;
   editingCartKey: string | null;
   selectedItem: MenuItem | null;
-  selectedDrinkIds: string[];
-  selectedExtraIds: string[];
-  selectedRemovedIngredientIds: string[];
+  selectedChoicesByGroup: Record<string, string[]>;
   modalQuantity: number;
-  drinkOptions: MenuItem[];
-  selectedRemovedIngredientNames: string[];
-  selectedExtraOptions: ModifierOption[];
-  selectedDrinkOptions: MenuItem[];
+  selectedOptions: SelectedOption[];
   selectedCustomizationKey: string;
   selectedCartItem: CartItem | undefined;
   selectedUnitPrice: number;
@@ -91,39 +82,54 @@ export type CartState = {
   setCartItemsById: React.Dispatch<React.SetStateAction<Record<string, CartItem>>>;
   setEditingCartKey: (key: string | null) => void;
   setModalQuantity: React.Dispatch<React.SetStateAction<number>>;
-  setSelectedDrinkIds: React.Dispatch<React.SetStateAction<string[]>>;
-  setSelectedExtraIds: React.Dispatch<React.SetStateAction<string[]>>;
-  setSelectedRemovedIngredientIds: React.Dispatch<React.SetStateAction<string[]>>;
+  setSelectedChoicesByGroup: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
   setSelectedItem: (item: MenuItem | null) => void;
   addToCart: (
     item: MenuItem,
     options?: {
-      drinkItems?: MenuItem[];
-      extraItems?: ModifierOption[];
+      selectedOptions?: SelectedOption[];
       quantity?: number;
-      removedIngredientNames?: string[];
     },
   ) => void;
   updateCartItem: (
     item: MenuItem,
     options: {
-      drinkItems: MenuItem[];
-      extraItems: ModifierOption[];
-      removedIngredientNames: string[];
+      selectedOptions: SelectedOption[];
     },
   ) => void;
   decrementCartItem: (itemId: string) => void;
   incrementCartItem: (itemId: string) => void;
   removeCartItem: (itemId: string) => void;
   getItemCartQuantity: (itemId: string) => number;
-  toggleSelection: (
-    value: string,
-    setValues: (updater: (currentValues: string[]) => string[]) => void,
-  ) => void;
+  handleGroupSelection: (groupId: string, choiceId: string) => void;
   clearCart: () => void;
   openItemDetails: (item: MenuItem) => void;
   openCartItemDetails: (item: CartItem) => void;
 };
+
+function buildSelectedOptions(
+  item: MenuItem,
+  selectedChoicesByGroup: Record<string, string[]>,
+): SelectedOption[] {
+  const options: SelectedOption[] = [];
+  for (const group of item.optionGroups) {
+    const selectedIds = selectedChoicesByGroup[group.id] ?? [];
+    for (const choiceId of selectedIds) {
+      const choice = group.choices.find((c) => c.id === choiceId);
+      if (choice) {
+        options.push({
+          groupId: group.id,
+          groupName: group.name,
+          choiceId: choice.id,
+          choiceName: choice.name,
+          priceModifierType: choice.priceModifierType,
+          priceModifier: choice.priceModifier,
+        });
+      }
+    }
+  }
+  return options;
+}
 
 export function useCart(
   selectedCategories: MenuCategory[],
@@ -132,20 +138,12 @@ export function useCart(
   const [cartItemsById, setCartItemsById] = useState<Record<string, CartItem>>({});
   const [editingCartKey, setEditingCartKey] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [selectedDrinkIds, setSelectedDrinkIds] = useState<string[]>([]);
-  const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([]);
-  const [selectedRemovedIngredientIds, setSelectedRemovedIngredientIds] = useState<string[]>([]);
+  const [selectedChoicesByGroup, setSelectedChoicesByGroup] = useState<Record<string, string[]>>(
+    {},
+  );
   const [modalQuantity, setModalQuantity] = useState(1);
   const hasHydratedCartRef = useRef(false);
   const hasSkippedInitialCartPersistRef = useRef(false);
-
-  const drinkOptions = useMemo(
-    () =>
-      selectedCategories.flatMap((category) =>
-        /drink|drikke|brus|soda/i.test(category.name) ? category.menu_items : [],
-      ),
-    [selectedCategories],
-  );
 
   const cartItems = Object.values(cartItemsById);
   const cartQuantity = cartItems.reduce((total, item) => total + item.quantity, 0);
@@ -154,26 +152,19 @@ export function useCart(
     0,
   );
 
-  const selectedRemovedIngredientNames = (selectedItem?.ingredients ?? [])
-    .filter((ingredient) => selectedRemovedIngredientIds.includes(ingredient.id))
-    .map((ingredient) => ingredient.name);
-  const selectedExtraOptions =
-    selectedItem?.addOnOptions.filter((option) => selectedExtraIds.includes(option.id)) ?? [];
-  const selectedDrinkOptions = drinkOptions.filter((drink) => selectedDrinkIds.includes(drink.id));
+  const selectedOptions = selectedItem
+    ? buildSelectedOptions(selectedItem, selectedChoicesByGroup)
+    : [];
   const selectedCustomizationKey = selectedItem
     ? getCustomizationKey(
         selectedItem.id,
-        selectedRemovedIngredientNames,
-        selectedExtraIds,
-        selectedDrinkIds,
+        selectedOptions.map((opt) => opt.choiceId),
       )
     : "";
   const selectedCartItem = selectedCustomizationKey
     ? cartItemsById[selectedCustomizationKey]
     : undefined;
-  const selectedUnitPrice = selectedItem
-    ? getCustomizedPrice(selectedItem, selectedExtraOptions, selectedDrinkOptions)
-    : 0;
+  const selectedUnitPrice = selectedItem ? getCustomizedPrice(selectedItem, selectedOptions) : 0;
   const selectedActionPrice =
     selectedCartItem || editingCartKey ? selectedUnitPrice : selectedUnitPrice * modalQuantity;
 
@@ -210,21 +201,15 @@ export function useCart(
   function addToCart(
     item: MenuItem,
     options: {
-      drinkItems?: MenuItem[];
-      extraItems?: ModifierOption[];
+      selectedOptions?: SelectedOption[];
       quantity?: number;
-      removedIngredientNames?: string[];
     } = {},
   ) {
-    const drinkItems = options.drinkItems ?? [];
-    const extraItems = options.extraItems ?? [];
+    const opts = options.selectedOptions ?? [];
     const quantity = options.quantity ?? 1;
-    const removedIngredientNames = options.removedIngredientNames ?? [];
     const cartKey = getCustomizationKey(
       item.id,
-      removedIngredientNames,
-      extraItems.map((extra) => extra.id),
-      drinkItems.map((drink) => drink.id),
+      opts.map((opt) => opt.choiceId),
     );
 
     setCartItemsById((currentItems) => ({
@@ -233,11 +218,9 @@ export function useCart(
         ...item,
         basePrice: item.price,
         cartKey,
-        drinkItems,
-        extraItems,
-        price: getCustomizedPrice(item, extraItems, drinkItems),
+        price: getCustomizedPrice(item, opts),
         quantity: (currentItems[cartKey]?.quantity ?? 0) + quantity,
-        removedIngredients: removedIngredientNames,
+        selectedOptions: opts,
       },
     }));
   }
@@ -245,16 +228,12 @@ export function useCart(
   function updateCartItem(
     item: MenuItem,
     options: {
-      drinkItems: MenuItem[];
-      extraItems: ModifierOption[];
-      removedIngredientNames: string[];
+      selectedOptions: SelectedOption[];
     },
   ) {
     const cartKey = getCustomizationKey(
       item.id,
-      options.removedIngredientNames,
-      options.extraItems.map((extra) => extra.id),
-      options.drinkItems.map((drink) => drink.id),
+      options.selectedOptions.map((opt) => opt.choiceId),
     );
 
     setCartItemsById((currentItems) => {
@@ -273,11 +252,9 @@ export function useCart(
           ...item,
           basePrice: item.price,
           cartKey,
-          drinkItems: options.drinkItems,
-          extraItems: options.extraItems,
-          price: getCustomizedPrice(item, options.extraItems, options.drinkItems),
+          price: getCustomizedPrice(item, options.selectedOptions),
           quantity: currentItem.quantity + (remainingItems[cartKey]?.quantity ?? 0),
-          removedIngredients: options.removedIngredientNames,
+          selectedOptions: options.selectedOptions,
         },
       };
     });
@@ -343,15 +320,30 @@ export function useCart(
     return cartItems.reduce((total, item) => total + (item.id === itemId ? item.quantity : 0), 0);
   }
 
-  function toggleSelection(
-    value: string,
-    setValues: (updater: (currentValues: string[]) => string[]) => void,
-  ) {
-    setValues((currentValues) =>
-      currentValues.includes(value)
-        ? currentValues.filter((currentValue) => currentValue !== value)
-        : [...currentValues, value],
-    );
+  function handleGroupSelection(groupId: string, choiceId: string) {
+    setSelectedChoicesByGroup((current) => {
+      const currentSelection = current[groupId] ?? [];
+      const group = selectedItem?.optionGroups.find((g) => g.id === groupId);
+
+      if (!group) return current;
+
+      if (group.isMultiSelect) {
+        const isSelected = currentSelection.includes(choiceId);
+        return {
+          ...current,
+          [groupId]: isSelected
+            ? currentSelection.filter((id) => id !== choiceId)
+            : [...currentSelection, choiceId],
+        };
+      }
+
+      // Single select: replace selection
+      const isSelected = currentSelection.includes(choiceId);
+      return {
+        ...current,
+        [groupId]: isSelected ? [] : [choiceId],
+      };
+    });
   }
 
   function clearCart() {
@@ -361,33 +353,27 @@ export function useCart(
   function openItemDetails(item: MenuItem) {
     setEditingCartKey(null);
     setModalQuantity(1);
-    setSelectedDrinkIds([]);
-    setSelectedExtraIds([]);
-    setSelectedRemovedIngredientIds([]);
+    setSelectedChoicesByGroup({});
     setSelectedItem(item);
   }
 
   function openCartItemDetails(item: CartItem) {
     setEditingCartKey(item.cartKey);
     setModalQuantity(item.quantity);
-    setSelectedDrinkIds(item.drinkItems.map((drink) => drink.id));
-    setSelectedExtraIds(item.extraItems.map((extra) => extra.id));
-    setSelectedRemovedIngredientIds(
-      item.ingredients
-        .filter((ingredient) => item.removedIngredients.includes(ingredient.name))
-        .map((ingredient) => ingredient.id),
-    );
+
+    // Restore selection state from cart item
+    const restored: Record<string, string[]> = {};
+    for (const opt of item.selectedOptions) {
+      const groupIds = restored[opt.groupId] ?? [];
+      groupIds.push(opt.choiceId);
+      restored[opt.groupId] = groupIds;
+    }
+    setSelectedChoicesByGroup(restored);
+
     setSelectedItem({
-      availableLocationIds: item.availableLocationIds,
-      addOnOptions: item.addOnOptions,
-      allergens: item.allergens,
-      description: item.description,
-      id: item.id,
-      ingredients: item.ingredients,
-      is_available: item.is_available,
-      image_url: item.image_url,
-      name: item.name,
+      ...item,
       price: item.basePrice,
+      optionGroups: item.optionGroups,
     });
   }
 
@@ -401,18 +387,11 @@ export function useCart(
     setEditingCartKey,
     selectedItem,
     setSelectedItem,
-    selectedDrinkIds,
-    setSelectedDrinkIds,
-    selectedExtraIds,
-    setSelectedExtraIds,
-    selectedRemovedIngredientIds,
-    setSelectedRemovedIngredientIds,
+    selectedChoicesByGroup,
+    setSelectedChoicesByGroup,
     modalQuantity,
     setModalQuantity,
-    drinkOptions,
-    selectedRemovedIngredientNames,
-    selectedExtraOptions,
-    selectedDrinkOptions,
+    selectedOptions,
     selectedCustomizationKey,
     selectedCartItem,
     selectedUnitPrice,
@@ -424,7 +403,7 @@ export function useCart(
     incrementCartItem,
     removeCartItem,
     getItemCartQuantity,
-    toggleSelection,
+    handleGroupSelection,
     clearCart,
     openItemDetails,
     openCartItemDetails,

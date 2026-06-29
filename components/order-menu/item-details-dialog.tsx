@@ -7,14 +7,13 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 
-import type { CartItem, MenuItem, ModifierOption } from "./types";
+import type { CartItem, MenuItem, OptionGroup } from "./types";
 import { formatPrice } from "./utils";
 import { useTranslations } from "./locale-context";
 
 type ItemDetailsDialogProps = {
   currency: string;
   decrementCartItem: (itemId: string) => void;
-  drinkOptions: MenuItem[];
   editingCartKey: string | null;
   incrementCartItem: (itemId: string) => void;
   isClosing: boolean;
@@ -22,27 +21,18 @@ type ItemDetailsDialogProps = {
   onAddToCart: () => void;
   onClose: () => void;
   onUpdateCartItem: () => void;
+  onGroupSelection: (groupId: string, choiceId: string) => void;
   selectedActionPrice: number;
   selectedCartItem: CartItem | undefined;
+  selectedChoicesByGroup: Record<string, string[]>;
   selectedCustomizationKey: string;
-  selectedDrinkIds: string[];
-  selectedExtraIds: string[];
   selectedItem: MenuItem;
-  selectedRemovedIngredientIds: string[];
   setModalQuantity: (updater: (currentQuantity: number) => number) => void;
-  toggleSelection: (
-    value: string,
-    setValues: (updater: (currentValues: string[]) => string[]) => void,
-  ) => void;
-  setSelectedDrinkIds: (updater: (currentValues: string[]) => string[]) => void;
-  setSelectedExtraIds: (updater: (currentValues: string[]) => string[]) => void;
-  setSelectedRemovedIngredientIds: (updater: (currentValues: string[]) => string[]) => void;
 };
 
 export function ItemDetailsDialog({
   currency,
   decrementCartItem,
-  drinkOptions,
   editingCartKey,
   incrementCartItem,
   isClosing,
@@ -50,18 +40,13 @@ export function ItemDetailsDialog({
   onAddToCart,
   onClose,
   onUpdateCartItem,
+  onGroupSelection,
   selectedActionPrice,
   selectedCartItem,
+  selectedChoicesByGroup,
   selectedCustomizationKey,
-  selectedDrinkIds,
-  selectedExtraIds,
   selectedItem,
-  selectedRemovedIngredientIds,
   setModalQuantity,
-  setSelectedDrinkIds,
-  setSelectedExtraIds,
-  setSelectedRemovedIngredientIds,
-  toggleSelection,
 }: ItemDetailsDialogProps) {
   const t = useTranslations();
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -111,36 +96,15 @@ export function ItemDetailsDialog({
             ) : null}
           </div>
 
-          <RemoveIngredientsSection
-            ingredients={selectedItem.ingredients}
-            selectedRemovedIngredientIds={selectedRemovedIngredientIds}
-            setSelectedRemovedIngredientIds={setSelectedRemovedIngredientIds}
-            toggleSelection={toggleSelection}
-          />
-
-          {selectedItem.addOnOptions.length > 0 ? (
-            <OptionList
+          {selectedItem.optionGroups.map((group) => (
+            <OptionGroupSection
               currency={currency}
-              description={t("item.add_extras_desc")}
-              options={selectedItem.addOnOptions}
-              selectedIds={selectedExtraIds}
-              setSelectedIds={setSelectedExtraIds}
-              title={t("item.add_extras")}
-              toggleSelection={toggleSelection}
+              group={group}
+              key={group.id}
+              onSelect={onGroupSelection}
+              selectedChoiceIds={selectedChoicesByGroup[group.id] ?? []}
             />
-          ) : null}
-
-          {drinkOptions.length > 0 ? (
-            <OptionList
-              currency={currency}
-              description={t("item.add_drinks_desc")}
-              options={drinkOptions}
-              selectedIds={selectedDrinkIds}
-              setSelectedIds={setSelectedDrinkIds}
-              title={t("item.add_drinks")}
-              toggleSelection={toggleSelection}
-            />
-          ) : null}
+          ))}
 
           <section className="mt-6 border-t border-border pt-6">
             <button
@@ -275,101 +239,73 @@ function ItemImage({ item }: { item: MenuItem }) {
   );
 }
 
-function RemoveIngredientsSection({
-  ingredients,
-  selectedRemovedIngredientIds,
-  setSelectedRemovedIngredientIds,
-  toggleSelection,
-}: Pick<
-  ItemDetailsDialogProps,
-  "selectedRemovedIngredientIds" | "setSelectedRemovedIngredientIds" | "toggleSelection"
-> & {
-  ingredients: MenuItem["ingredients"];
+function OptionGroupSection({
+  currency,
+  group,
+  onSelect,
+  selectedChoiceIds,
+}: {
+  currency: string;
+  group: OptionGroup;
+  onSelect: (groupId: string, choiceId: string) => void;
+  selectedChoiceIds: string[];
 }) {
   const t = useTranslations();
 
-  if (ingredients.length === 0) {
-    return null;
-  }
-
   return (
     <section className="mt-6 border-t border-border pt-6 first:border-t-0 first:pt-0">
-      <div>
-        <h3 className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">
-          {t("item.remove_ingredients")}
-        </h3>
-        <p className="mt-1 text-sm leading-5 text-muted-foreground">{t("item.select_anything")}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">
+            {group.name}
+            {group.isRequired ? (
+              <span className="ml-1 text-destructive" aria-label={t("item.required")}>
+                *
+              </span>
+            ) : null}
+          </h3>
+          {group.description ? (
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">{group.description}</p>
+          ) : null}
+        </div>
+        {group.isRequired && selectedChoiceIds.length < group.minSelect ? (
+          <span className="shrink-0 text-xs font-semibold text-destructive">
+            {t("item.required_selection")}
+          </span>
+        ) : null}
       </div>
       <div className="mt-3 space-y-1">
-        {ingredients.map((ingredient) => {
-          const isSelected = selectedRemovedIngredientIds.includes(ingredient.id);
+        {group.choices.map((choice) => {
+          const isSelected = selectedChoiceIds.includes(choice.id);
 
           return (
             <button
               aria-pressed={isSelected}
               className="flex w-full cursor-pointer items-center justify-between gap-4 py-2 text-left transition-colors hover:text-primary active:scale-[0.98]"
-              key={ingredient.id}
-              onClick={() => toggleSelection(ingredient.id, setSelectedRemovedIngredientIds)}
+              key={choice.id}
+              onClick={() => onSelect(group.id, choice.id)}
               type="button"
             >
               <span className="flex min-w-0 items-center gap-3">
-                <CheckIndicator isSelected={isSelected} />
-                <span className="min-w-0 font-semibold">
-                  {t("item.no_prefix")} {ingredient.name}
+                {group.isMultiSelect ? (
+                  <CheckIndicator isSelected={isSelected} />
+                ) : (
+                  <RadioIndicator isSelected={isSelected} />
+                )}
+                <span className="min-w-0 font-semibold">{choice.name}</span>
+              </span>
+              {choice.priceModifierType !== "neutral" && choice.priceModifier > 0 ? (
+                <span
+                  className={`shrink-0 text-sm font-bold ${
+                    choice.priceModifierType === "increase"
+                      ? "text-muted-foreground"
+                      : "text-green-600"
+                  }`}
+                >
+                  {choice.priceModifierType === "increase" ? "+ " : "- "}
+                  {formatPrice(choice.priceModifier, currency)}
                 </span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function OptionList({
-  currency,
-  description,
-  options,
-  selectedIds,
-  setSelectedIds,
-  title,
-  toggleSelection,
-}: {
-  currency: string;
-  description: string;
-  options: Array<MenuItem | ModifierOption>;
-  selectedIds: string[];
-  setSelectedIds: (updater: (currentValues: string[]) => string[]) => void;
-  title: string;
-  toggleSelection: ItemDetailsDialogProps["toggleSelection"];
-}) {
-  return (
-    <section className="mt-6 border-t border-border pt-6 first:border-t-0 first:pt-0">
-      <div>
-        <h3 className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">
-          {title}
-        </h3>
-        <p className="mt-1 text-sm leading-5 text-muted-foreground">{description}</p>
-      </div>
-      <div className="mt-3 space-y-1">
-        {options.map((option) => {
-          const isSelected = selectedIds.includes(option.id);
-
-          return (
-            <button
-              aria-pressed={isSelected}
-              className="flex w-full cursor-pointer items-center justify-between gap-4 py-2 text-left transition-colors hover:text-primary active:scale-[0.98]"
-              key={option.id}
-              onClick={() => toggleSelection(option.id, setSelectedIds)}
-              type="button"
-            >
-              <span className="flex min-w-0 items-center gap-3">
-                <CheckIndicator isSelected={isSelected} />
-                <span className="min-w-0 font-semibold">{option.name}</span>
-              </span>
-              <span className="shrink-0 text-sm font-bold text-muted-foreground">
-                + {formatPrice(option.price, currency)}
-              </span>
+              ) : null}
             </button>
           );
         })}
@@ -388,6 +324,20 @@ function CheckIndicator({ isSelected }: { isSelected: boolean }) {
       }`}
     >
       <Check className="size-3.5" aria-hidden="true" />
+    </span>
+  );
+}
+
+function RadioIndicator({ isSelected }: { isSelected: boolean }) {
+  return (
+    <span
+      className={`grid size-5 shrink-0 place-items-center rounded-full border transition-colors ${
+        isSelected ? "border-primary bg-primary" : "border-muted-foreground/30 bg-white"
+      }`}
+    >
+      {isSelected ? (
+        <span className="size-2 rounded-full bg-primary-foreground" aria-hidden="true" />
+      ) : null}
     </span>
   );
 }

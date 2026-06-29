@@ -59,19 +59,19 @@ describe("getPriceValue", () => {
 
 describe("getCustomizationKey", () => {
   it("creates a key with all parts", () => {
-    const key = getCustomizationKey("item-1", ["cheese"], ["extra-1"], ["drink-1"]);
-    expect(key).toBe("item-1:cheese:extra-1:drink-1");
+    const key = getCustomizationKey("item-1", ["cheese", "extra-1", "drink-1"]);
+    expect(key).toBe("item-1:cheese,drink-1,extra-1");
   });
 
   it("sorts arrays for deterministic keys", () => {
-    const a = getCustomizationKey("item-1", ["z", "a"], ["9", "1"], ["x", "m"]);
-    const b = getCustomizationKey("item-1", ["a", "z"], ["1", "9"], ["m", "x"]);
+    const a = getCustomizationKey("item-1", ["z", "a", "9", "1", "x", "m"]);
+    const b = getCustomizationKey("item-1", ["a", "z", "1", "9", "m", "x"]);
     expect(a).toBe(b);
   });
 
   it("handles empty arrays", () => {
-    const key = getCustomizationKey("item-1", [], [], []);
-    expect(key).toBe("item-1:::");
+    const key = getCustomizationKey("item-1", []);
+    expect(key).toBe("item-1:");
   });
 });
 
@@ -83,30 +83,63 @@ describe("getCustomizedPrice", () => {
     image_url: null,
     price: 100,
     availableLocationIds: [],
-    addOnOptions: [],
+    optionGroups: [],
     allergens: [],
-    ingredients: [],
     is_available: true,
   };
 
-  it("returns base price with no extras", () => {
-    expect(getCustomizedPrice(baseItem, [], [])).toBe(100);
+  it("returns base price with no options", () => {
+    expect(getCustomizedPrice(baseItem, [])).toBe(100);
   });
 
   it("adds extra option prices", () => {
-    const extras = [{ id: "e1", name: "Bacon", price: 15 }];
-    expect(getCustomizedPrice(baseItem, extras, [])).toBe(115);
+    const extras = [
+      {
+        groupId: "g1",
+        groupName: "Extras",
+        choiceId: "e1",
+        choiceName: "Bacon",
+        priceModifierType: "increase" as const,
+        priceModifier: 15,
+      },
+    ];
+    expect(getCustomizedPrice(baseItem, extras)).toBe(115);
   });
 
   it("adds drink prices", () => {
-    const drinks = [{ ...baseItem, id: "d1", name: "Cola", price: 25 }];
-    expect(getCustomizedPrice(baseItem, [], drinks)).toBe(125);
+    const drinks = [
+      {
+        groupId: "g2",
+        groupName: "Drinks",
+        choiceId: "d1",
+        choiceName: "Cola",
+        priceModifierType: "increase" as const,
+        priceModifier: 25,
+      },
+    ];
+    expect(getCustomizedPrice(baseItem, drinks)).toBe(125);
   });
 
   it("sums extras and drinks together", () => {
-    const extras = [{ id: "e1", name: "Bacon", price: 15 }];
-    const drinks = [{ ...baseItem, id: "d1", name: "Cola", price: 25 }];
-    expect(getCustomizedPrice(baseItem, extras, drinks)).toBe(140);
+    const options = [
+      {
+        groupId: "g1",
+        groupName: "Extras",
+        choiceId: "e1",
+        choiceName: "Bacon",
+        priceModifierType: "increase" as const,
+        priceModifier: 15,
+      },
+      {
+        groupId: "g2",
+        groupName: "Drinks",
+        choiceId: "d1",
+        choiceName: "Cola",
+        priceModifierType: "increase" as const,
+        priceModifier: 25,
+      },
+    ];
+    expect(getCustomizedPrice(baseItem, options)).toBe(140);
   });
 });
 

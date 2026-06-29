@@ -122,18 +122,10 @@ export function OrderMenu({
     setEditingCartKey,
     selectedItem,
     setSelectedItem,
-    selectedDrinkIds,
-    setSelectedDrinkIds,
-    selectedExtraIds,
-    setSelectedExtraIds,
-    selectedRemovedIngredientIds,
-    setSelectedRemovedIngredientIds,
+    selectedChoicesByGroup,
     modalQuantity,
     setModalQuantity,
-    drinkOptions,
-    selectedRemovedIngredientNames,
-    selectedExtraOptions,
-    selectedDrinkOptions,
+    selectedOptions,
     selectedCustomizationKey,
     selectedCartItem,
     selectedActionPrice,
@@ -143,7 +135,7 @@ export function OrderMenu({
     incrementCartItem,
     removeCartItem,
     getItemCartQuantity,
-    toggleSelection,
+    handleGroupSelection,
     clearCart,
     openItemDetails: cartOpenItemDetails,
     openCartItemDetails,
@@ -515,10 +507,8 @@ export function OrderMenu({
   function handleAddToCart() {
     if (!selectedItem) return;
     addToCart(selectedItem, {
-      drinkItems: selectedDrinkOptions,
-      extraItems: selectedExtraOptions,
+      selectedOptions,
       quantity: modalQuantity,
-      removedIngredientNames: selectedRemovedIngredientNames,
     });
     closeItemDetails();
   }
@@ -526,9 +516,7 @@ export function OrderMenu({
   function handleUpdateCartItem() {
     if (!selectedItem || !editingCartKey) return;
     updateCartItem(selectedItem, {
-      drinkItems: selectedDrinkOptions,
-      extraItems: selectedExtraOptions,
-      removedIngredientNames: selectedRemovedIngredientNames,
+      selectedOptions,
     });
     closeItemDetails();
   }
@@ -818,7 +806,6 @@ export function OrderMenu({
             <ItemDetailsDialog
               currency={currency}
               decrementCartItem={decrementCartItem}
-              drinkOptions={drinkOptions}
               editingCartKey={editingCartKey}
               incrementCartItem={incrementCartItem}
               isClosing={isItemClosing}
@@ -826,18 +813,13 @@ export function OrderMenu({
               onAddToCart={handleAddToCart}
               onClose={closeItemDetails}
               onUpdateCartItem={handleUpdateCartItem}
+              onGroupSelection={handleGroupSelection}
               selectedActionPrice={selectedActionPrice}
               selectedCartItem={selectedCartItem}
+              selectedChoicesByGroup={selectedChoicesByGroup}
               selectedCustomizationKey={selectedCustomizationKey}
-              selectedDrinkIds={selectedDrinkIds}
-              selectedExtraIds={selectedExtraIds}
               selectedItem={selectedItem}
-              selectedRemovedIngredientIds={selectedRemovedIngredientIds}
               setModalQuantity={setModalQuantity}
-              setSelectedDrinkIds={setSelectedDrinkIds}
-              setSelectedExtraIds={setSelectedExtraIds}
-              setSelectedRemovedIngredientIds={setSelectedRemovedIngredientIds}
-              toggleSelection={toggleSelection}
             />
           ) : null}
 
@@ -916,6 +898,7 @@ export function OrderMenu({
 
           {isSearchOpen && shouldShowOrderContent ? (
             <SearchDialog
+              currency={currency}
               getItemCartQuantity={getItemCartQuantity}
               onClose={closeSearch}
               onSelectResult={selectSearchResult}

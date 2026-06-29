@@ -1,4 +1,4 @@
-import type { CartItem, MenuItem, ModifierOption } from "./types";
+import type { CartItem, MenuItem, SelectedOption } from "./types";
 
 const CURRENCY_LOCALE: Record<string, string> = {
   DKK: "da-DK",
@@ -31,25 +31,16 @@ export function getPriceValue(price: number | string) {
   return Number.isNaN(value) ? 0 : value;
 }
 
-export function getCustomizationKey(
-  itemId: string,
-  removedIngredientIds: string[],
-  extraIds: string[],
-  drinkIds: string[],
-) {
-  return [
-    itemId,
-    removedIngredientIds.toSorted().join(","),
-    extraIds.toSorted().join(","),
-    drinkIds.toSorted().join(","),
-  ].join(":");
+export function getCustomizationKey(itemId: string, selectedOptionIds: string[]) {
+  return [itemId, selectedOptionIds.toSorted().join(",")].join(":");
 }
 
-export function getCustomizedPrice(item: MenuItem, extras: ModifierOption[], drinks: MenuItem[]) {
-  return [...extras, ...drinks].reduce(
-    (total, option) => total + getPriceValue(option.price),
-    getPriceValue(item.price),
-  );
+export function getCustomizedPrice(item: MenuItem, selectedOptions: SelectedOption[]) {
+  return selectedOptions.reduce((total, option) => {
+    if (option.priceModifierType === "increase") return total + option.priceModifier;
+    if (option.priceModifierType === "decrease") return total - option.priceModifier;
+    return total;
+  }, getPriceValue(item.price));
 }
 
 import { countryCodes } from "./constants";
@@ -68,9 +59,13 @@ export function getCartCustomizationLabels(
   t: (key: string, params?: Record<string, string | number>) => string,
   currency = "NOK",
 ) {
-  return [
-    ...item.removedIngredients.map((ingredient) => `${t("item.no_prefix")} ${ingredient}`),
-    ...item.extraItems.map((extra) => `+ ${extra.name} (${formatPrice(extra.price, currency)})`),
-    ...item.drinkItems.map((drink) => `+ ${drink.name} (${formatPrice(drink.price, currency)})`),
-  ];
+  return item.selectedOptions.map((opt) => {
+    if (opt.priceModifierType === "increase") {
+      return `+ ${opt.choiceName} (${formatPrice(opt.priceModifier, currency)})`;
+    }
+    if (opt.priceModifierType === "decrease") {
+      return `${opt.choiceName} (-${formatPrice(opt.priceModifier, currency)})`;
+    }
+    return opt.choiceName;
+  });
 }

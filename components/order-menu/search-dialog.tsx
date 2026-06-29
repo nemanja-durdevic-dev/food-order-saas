@@ -15,6 +15,7 @@ type SearchResult = {
 };
 
 type SearchDialogProps = {
+  currency: string;
   getItemCartQuantity: (itemId: string) => number;
   onClose: () => void;
   onSelectResult: (item: MenuItem) => void;
@@ -26,6 +27,7 @@ type SearchDialogProps = {
 };
 
 export function SearchDialog({
+  currency,
   getItemCartQuantity,
   onClose,
   onSelectResult,
@@ -69,6 +71,7 @@ export function SearchDialog({
           {searchResults.length > 0 ? (
             searchResults.map(({ item }, index) => (
               <MenuItemCard
+                currency={currency}
                 item={item}
                 itemCartQuantity={getItemCartQuantity(item.id)}
                 key={item.id}

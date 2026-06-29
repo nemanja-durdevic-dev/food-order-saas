@@ -9,7 +9,7 @@ import { AdminRecordForm } from "../../_components/admin-record-form";
 import { AdminShell } from "../../_components/admin-shell";
 import { LocationHoursSection } from "@/components/admin/location-hours-section";
 import { LocationHoursOverridesSection } from "@/components/admin/location-hours-overrides-section";
-import { addLocationHoursOverride, deleteLocationHoursOverride } from "../../actions";
+import { addLocationHoursOverrideAction, deleteLocationHoursOverrideAction } from "../../actions";
 
 type Props = {
   searchParams?: Promise<{ id?: string }>;
@@ -178,8 +178,6 @@ export default async function LocationEditPage({ searchParams }: Props) {
     .order("date", { ascending: true });
 
   const action = updateLocation.bind(null, id);
-  const addOverride = addLocationHoursOverride.bind(null);
-  const deleteOverride = deleteLocationHoursOverride.bind(null);
 
   const imageValues: Record<string, string> = {};
 
@@ -226,8 +224,8 @@ export default async function LocationEditPage({ searchParams }: Props) {
 
         <div className="border-t border-border pt-8">
           <LocationHoursOverridesSection
-            addAction={addOverride}
-            deleteAction={deleteOverride}
+            addAction={addLocationHoursOverrideAction}
+            deleteAction={deleteLocationHoursOverrideAction}
             locationId={id}
             overrides={
               (overrides ?? []) as Array<{

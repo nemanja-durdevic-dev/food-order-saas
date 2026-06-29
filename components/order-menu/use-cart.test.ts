@@ -1,12 +1,40 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useCart } from "./use-cart";
-import type { Location, MenuCategory, MenuItem, ModifierOption } from "./types";
+import type { Location, MenuCategory, MenuItem, OptionGroup, SelectedOption } from "./types";
 
 // --- Test Data ---
 
-const cheese: ModifierOption = { id: "extra-cheese", name: "Extra Cheese", price: 15 };
-const bacon: ModifierOption = { id: "extra-bacon", name: "Bacon", price: 20 };
+const cheese: SelectedOption = {
+  groupId: "g-toppings",
+  groupName: "Toppings",
+  choiceId: "extra-cheese",
+  choiceName: "Extra Cheese",
+  priceModifierType: "increase",
+  priceModifier: 15,
+};
+
+const bacon: SelectedOption = {
+  groupId: "g-toppings",
+  groupName: "Toppings",
+  choiceId: "extra-bacon",
+  choiceName: "Bacon",
+  priceModifierType: "increase",
+  priceModifier: 20,
+};
+
+const testOptionGroup: OptionGroup = {
+  id: "g-toppings",
+  name: "Toppings",
+  isRequired: false,
+  isMultiSelect: true,
+  minSelect: 0,
+  maxSelect: null,
+  choices: [
+    { id: "extra-cheese", name: "Extra Cheese", priceModifierType: "increase", priceModifier: 15 },
+    { id: "extra-bacon", name: "Bacon", priceModifierType: "increase", priceModifier: 20 },
+  ],
+};
 
 const burger: MenuItem = {
   id: "burger-1",
@@ -15,12 +43,8 @@ const burger: MenuItem = {
   image_url: null,
   price: 100,
   availableLocationIds: ["loc-1"],
-  addOnOptions: [cheese, bacon],
+  optionGroups: [testOptionGroup],
   allergens: [{ id: "a1", name: "Gluten" }],
-  ingredients: [
-    { id: "i1", name: "Onion" },
-    { id: "i2", name: "Lettuce" },
-  ],
   is_available: true,
 };
 
@@ -31,9 +55,8 @@ const cola: MenuItem = {
   image_url: null,
   price: 25,
   availableLocationIds: ["loc-1"],
-  addOnOptions: [],
+  optionGroups: [],
   allergens: [],
-  ingredients: [],
   is_available: true,
 };
 
@@ -44,9 +67,8 @@ const fries: MenuItem = {
   image_url: null,
   price: 50,
   availableLocationIds: ["loc-1"],
-  addOnOptions: [],
+  optionGroups: [],
   allergens: [],
-  ingredients: [],
   is_available: true,
 };
 
@@ -76,6 +98,7 @@ const location: Location = {
   is_open: true,
   opening_hours: null,
   phone: "+47 12345678",
+  currency: "NOK",
 };
 
 // --- Mock localStorage ---
@@ -143,38 +166,26 @@ describe("useCart", () => {
 
       act(() => {
         result.current.addToCart(burger);
-        result.current.addToCart(burger, { extraItems: [cheese] });
+        result.current.addToCart(burger, { selectedOptions: [cheese] });
       });
 
       expect(result.current.cartItems).toHaveLength(2);
       expect(result.current.cartQuantity).toBe(2);
     });
 
-    it("adds items with extras and drinks", () => {
+    it("adds items with selected options", () => {
       const { result } = setupHook();
 
       act(() => {
         result.current.addToCart(burger, {
-          extraItems: [cheese, bacon],
-          drinkItems: [cola],
+          selectedOptions: [cheese, bacon],
         });
       });
 
       expect(result.current.cartItems).toHaveLength(1);
-      // 100 + 15 + 20 + 25 = 160
-      expect(result.current.cartSubtotal).toBe(160);
-    });
-
-    it("adds items with removed ingredients", () => {
-      const { result } = setupHook();
-
-      act(() => {
-        result.current.addToCart(burger, {
-          removedIngredientNames: ["Onion"],
-        });
-      });
-
-      expect(result.current.cartItems[0].removedIngredients).toEqual(["Onion"]);
+      // 100 + 15 + 20 = 135
+      expect(result.current.cartSubtotal).toBe(135);
+      expect(result.current.cartItems[0].selectedOptions).toEqual([cheese, bacon]);
     });
   });
 
@@ -195,15 +206,13 @@ describe("useCart", () => {
 
       act(() => {
         result.current.updateCartItem(burger, {
-          drinkItems: [],
-          extraItems: [cheese],
-          removedIngredientNames: [],
+          selectedOptions: [cheese],
         });
       });
 
       expect(result.current.cartItems).toHaveLength(1);
       expect(result.current.cartItems[0].price).toBe(115);
-      expect(result.current.cartItems[0].extraItems).toEqual([cheese]);
+      expect(result.current.cartItems[0].selectedOptions).toEqual([cheese]);
     });
 
     it("merges with existing item of the same customization", () => {
@@ -211,7 +220,7 @@ describe("useCart", () => {
 
       act(() => {
         result.current.addToCart(burger, { quantity: 1 });
-        result.current.addToCart(burger, { extraItems: [cheese], quantity: 2 });
+        result.current.addToCart(burger, { selectedOptions: [cheese], quantity: 2 });
       });
 
       expect(result.current.cartItems).toHaveLength(2);
@@ -224,9 +233,7 @@ describe("useCart", () => {
 
       act(() => {
         result.current.updateCartItem(burger, {
-          drinkItems: [],
-          extraItems: [cheese],
-          removedIngredientNames: [],
+          selectedOptions: [cheese],
         });
       });
 
@@ -356,11 +363,10 @@ describe("useCart", () => {
       expect(result.current.cartSubtotal).toBe(250);
     });
 
-    it("derives drinkOptions from drink categories", () => {
+    it("starts with empty selectedChoicesByGroup", () => {
       const { result } = setupHook();
 
-      expect(result.current.drinkOptions).toHaveLength(1);
-      expect(result.current.drinkOptions[0].name).toBe("Cola");
+      expect(result.current.selectedChoicesByGroup).toEqual({});
     });
   });
 
@@ -370,7 +376,7 @@ describe("useCart", () => {
 
       act(() => {
         result.current.addToCart(fries);
-        result.current.addToCart(fries, { extraItems: [cheese] });
+        result.current.addToCart(fries, { selectedOptions: [cheese] });
       });
 
       expect(result.current.getItemCartQuantity("fries-1")).toBe(2);
@@ -383,31 +389,38 @@ describe("useCart", () => {
     });
   });
 
-  describe("toggleSelection", () => {
-    it("adds a value not already in the array", () => {
+  describe("handleGroupSelection", () => {
+    it("adds a choice to a group", () => {
       const { result } = setupHook();
-      let current: string[] = [];
 
       act(() => {
-        result.current.toggleSelection("a", (updater) => {
-          current = updater(current);
-        });
+        result.current.openItemDetails(burger);
       });
 
-      expect(current).toEqual(["a"]);
+      act(() => {
+        result.current.handleGroupSelection("g-toppings", "extra-cheese");
+      });
+
+      expect(result.current.selectedChoicesByGroup).toEqual({
+        "g-toppings": ["extra-cheese"],
+      });
     });
 
-    it("removes a value already in the array", () => {
+    it("removes a choice from a group on second click", () => {
       const { result } = setupHook();
-      let current = ["a", "b"];
 
       act(() => {
-        result.current.toggleSelection("a", (updater) => {
-          current = updater(current);
-        });
+        result.current.openItemDetails(burger);
       });
 
-      expect(current).toEqual(["b"]);
+      act(() => {
+        result.current.handleGroupSelection("g-toppings", "extra-cheese");
+        result.current.handleGroupSelection("g-toppings", "extra-cheese");
+      });
+
+      expect(result.current.selectedChoicesByGroup).toEqual({
+        "g-toppings": [],
+      });
     });
   });
 
@@ -422,9 +435,7 @@ describe("useCart", () => {
       expect(result.current.selectedItem?.id).toBe("burger-1");
       expect(result.current.editingCartKey).toBeNull();
       expect(result.current.modalQuantity).toBe(1);
-      expect(result.current.selectedDrinkIds).toEqual([]);
-      expect(result.current.selectedExtraIds).toEqual([]);
-      expect(result.current.selectedRemovedIngredientIds).toEqual([]);
+      expect(result.current.selectedChoicesByGroup).toEqual({});
     });
   });
 
@@ -434,8 +445,7 @@ describe("useCart", () => {
 
       act(() => {
         result.current.addToCart(burger, {
-          extraItems: [cheese],
-          removedIngredientNames: ["Onion"],
+          selectedOptions: [cheese],
         });
       });
 
@@ -447,8 +457,7 @@ describe("useCart", () => {
 
       expect(result.current.editingCartKey).toBe(item.cartKey);
       expect(result.current.modalQuantity).toBe(1);
-      expect(result.current.selectedExtraIds).toContain("extra-cheese");
-      expect(result.current.selectedRemovedIngredientIds).toContain("i1");
+      expect(result.current.selectedChoicesByGroup).toEqual({ "g-toppings": ["extra-cheese"] });
     });
   });
 
@@ -491,9 +500,7 @@ describe("useCart", () => {
           {
             itemId: "fries-1",
             quantity: 3,
-            drinkIds: [],
-            extraIds: [],
-            removedIngredientNames: [],
+            selectedOptionIds: [],
           },
         ],
       };
@@ -512,9 +519,7 @@ describe("useCart", () => {
           {
             itemId: "deleted-item",
             quantity: 1,
-            drinkIds: [],
-            extraIds: [],
-            removedIngredientNames: [],
+            selectedOptionIds: [],
           },
         ],
       };
@@ -532,9 +537,7 @@ describe("useCart", () => {
           {
             itemId: "burger-1",
             quantity: 2,
-            drinkIds: [],
-            extraIds: [],
-            removedIngredientNames: [],
+            selectedOptionIds: [],
           },
         ],
       };

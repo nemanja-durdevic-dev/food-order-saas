@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { CartItem } from "./types";
+import type { CartItem, OptionChoice, OptionGroup } from "./types";
 
 const cartStorageKey = "food-app:cart:v1";
 export const cartStorageVersion = 1 as const;
@@ -10,9 +10,7 @@ export const locationStorageVersion = 1 as const;
 const storedCartItemSchema = z.object({
   itemId: z.string(),
   quantity: z.number().int().positive(),
-  drinkIds: z.array(z.string()),
-  extraIds: z.array(z.string()),
-  removedIngredientNames: z.array(z.string()),
+  selectedOptionIds: z.array(z.string()),
 });
 
 const cartEnvelopeSchema = z.object({
@@ -52,11 +50,9 @@ export function writeStoredCart(cartItems: CartItem[]) {
 
     const storedCart = {
       items: cartItems.map((item) => ({
-        drinkIds: item.drinkItems.map((drink) => drink.id),
-        extraIds: item.extraItems.map((extra) => extra.id),
         itemId: item.id,
         quantity: item.quantity,
-        removedIngredientNames: item.removedIngredients,
+        selectedOptionIds: item.selectedOptions.map((opt) => opt.choiceId),
       })),
       version: cartStorageVersion,
     };
@@ -134,4 +130,16 @@ export function writeStoredAllergens(allergenIds: string[]) {
   } catch {
     // Ignore storage failures.
   }
+}
+
+export function getChoiceById(
+  groups: OptionGroup[],
+): Map<string, { choice: OptionChoice; group: OptionGroup }> {
+  const map = new Map<string, { choice: OptionChoice; group: OptionGroup }>();
+  for (const group of groups) {
+    for (const choice of group.choices) {
+      map.set(choice.id, { choice, group });
+    }
+  }
+  return map;
 }
