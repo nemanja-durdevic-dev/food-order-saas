@@ -710,7 +710,7 @@ export function AdminRecordForm({
         id={formId}
         onChange={handleFieldChange}
       >
-        <div className="sticky top-14 z-20 flex items-center justify-between border-b border-border bg-background py-4 lg:top-0">
+        <div className="sticky top-14 z-20 flex items-center justify-between border-b border-border bg-background py-4 lg:top-14">
           <FormSubmitButton disabled={!hasChanges} mode={mode} />
 
           <div className="flex items-center gap-3">
