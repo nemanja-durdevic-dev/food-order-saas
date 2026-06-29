@@ -169,7 +169,7 @@ export default async function OrderDetailPage({ params }: Props) {
       ]}
       restaurantName={restaurant?.name}
     >
-      <div className="max-w-3xl">
+      <div className="w-full">
         <Link
           className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
           href="/admin/orders"
