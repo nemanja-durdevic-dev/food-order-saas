@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import type { MenuCategory } from "@/components/order-menu/types";
-import type { MenuPublicationSnapshot } from "@/lib/admin/menu-publications";
 import { StaffOrder } from "./staff-order";
 
 type CategoryRow = {
@@ -167,7 +166,6 @@ export default async function StaffOrderPage() {
     ingredientsResult,
     allergensResult,
     addOnsResult,
-    publicationResult,
   ] = await Promise.all([
     supabase
       .from("categories")
@@ -209,15 +207,6 @@ export default async function StaffOrderPage() {
         "menu_item_id, add_on_option_id, add_on_options(name, price, name_no, name_sv, name_da)",
       )
       .order("sort_order", { ascending: true }),
-    location?.restaurant_id
-      ? supabase
-          .from("menu_publications")
-          .select("snapshot")
-          .eq("restaurant_id", location.restaurant_id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
   ]);
 
   const menuItems = ((menuItemsResult?.data ?? []) as MenuItemRow[]).map((item) => ({
@@ -337,14 +326,6 @@ export default async function StaffOrderPage() {
       };
     })
     .filter((category) => category.menu_items.length > 0) as MenuCategory[];
-  const publicationSnapshot = publicationResult.data?.snapshot as
-    | MenuPublicationSnapshot
-    | undefined;
-
-  if (publicationSnapshot) {
-    categories = publicationSnapshot.categoriesByLocale.en;
-  }
-
   categories = getCategoriesForLocation(categories, staff.location_id);
 
   return (

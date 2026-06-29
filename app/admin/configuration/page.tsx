@@ -83,7 +83,7 @@ export default async function AdminConfigurationPage() {
       supabaseAdmin
         .from("restaurants")
         .select(
-          "id, name, slug, description, logo_url, cover_image_url, brand_color, stripe_account_id, payments_enabled, status, contact_email, instagram_url, facebook_url, tiktok_url, menu_dirty, menu_published_at",
+          "id, name, slug, description, logo_url, cover_image_url, brand_color, stripe_account_id, payments_enabled, status, contact_email, instagram_url, facebook_url, tiktok_url",
         )
         .eq("id", membership.restaurant_id)
         .maybeSingle(),
@@ -327,8 +327,6 @@ export default async function AdminConfigurationPage() {
   return (
     <AdminShell
       breadcrumbItems={[{ href: "/admin", label: "Admin" }, { label: "Configuration" }]}
-      menuDirty={Boolean(restaurant.menu_dirty)}
-      menuPublishedAt={restaurant.menu_published_at ?? null}
       restaurantName={restaurant.name}
     >
       <div className="mx-auto max-w-4xl">

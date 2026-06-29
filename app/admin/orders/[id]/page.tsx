@@ -148,7 +148,7 @@ export default async function OrderDetailPage({ params }: Props) {
 
   const { data: restaurant } = await supabaseAdmin
     .from("restaurants")
-    .select("name, menu_dirty, menu_published_at")
+    .select("name")
     .eq("id", membership.restaurant_id)
     .maybeSingle();
 
@@ -187,8 +187,6 @@ export default async function OrderDetailPage({ params }: Props) {
         { href: "/admin/orders", label: "Orders" },
         { label: order.order_code ?? "Order" },
       ]}
-      menuDirty={Boolean(restaurant?.menu_dirty)}
-      menuPublishedAt={restaurant?.menu_published_at ?? null}
       restaurantName={restaurant?.name}
     >
       <div className="max-w-3xl">

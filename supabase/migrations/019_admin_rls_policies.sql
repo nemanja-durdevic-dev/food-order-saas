@@ -254,13 +254,3 @@ create policy "Admins can manage their location hours"
     )
   );
 
-create policy "Admins can publish menu snapshots"
-  on public.menu_publications
-  for insert
-  with check (
-    restaurant_id in (
-      select restaurant_id
-      from public.restaurant_members
-      where user_id = auth.uid() and role in ('admin', 'owner')
-    )
-  );

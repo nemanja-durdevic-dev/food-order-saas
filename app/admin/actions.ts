@@ -5,11 +5,6 @@ import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getAdminResource, type AdminField } from "@/lib/admin/resources";
-import {
-  buildMenuPublicationSnapshot,
-  type MenuPublicationSnapshot,
-} from "@/lib/admin/menu-publications";
-import { computeMenuDiff, type MenuChange } from "@/lib/admin/menu-diff";
 import { getAdminClient } from "@/lib/admin/admin-client";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
@@ -286,22 +281,6 @@ async function removeAdminImages(publicUrls: Array<string | null | undefined>) {
   await Promise.all(publicUrls.map((publicUrl) => removeAdminImage(publicUrl)));
 }
 
-async function markMenuDirty(supabase: SupabaseClient, restaurantId: string) {
-  await supabase.from("restaurants").update({ menu_dirty: true }).eq("id", restaurantId);
-}
-
-async function markMenuDirtyForResource(
-  supabase: SupabaseClient,
-  restaurantId: string,
-  resourceSlug: string,
-) {
-  if (!["categories", "menu-items", "subcategories"].includes(resourceSlug)) {
-    return;
-  }
-
-  await markMenuDirty(supabase, restaurantId);
-}
-
 async function syncJoinFields(
   supabase: SupabaseClient,
   collection: string,
@@ -413,7 +392,6 @@ export async function createAdminRecord(
     return { error: error instanceof Error ? error.message : "Failed to sync join fields." };
   }
 
-  await markMenuDirtyForResource(supabase, restaurantId, buildResult.resource.slug);
   revalidatePath("/admin");
   revalidatePath(`/admin/${buildResult.resource.slug}`);
   return { success: true };
@@ -483,7 +461,6 @@ export async function updateAdminRecord(
       .map((key) => (typeof existingImages[key] === "string" ? existingImages[key] : null)),
   );
 
-  await markMenuDirtyForResource(supabase, restaurantId, buildResult.resource.slug);
   revalidatePath("/admin");
   revalidatePath(`/admin/${buildResult.resource.slug}`);
   return { success: true };
@@ -600,7 +577,6 @@ export async function duplicateAdminRecord(collection: string, id: string, _form
     throw error;
   }
 
-  await markMenuDirtyForResource(supabase, restaurantId, resource.slug);
   revalidatePath("/admin");
   revalidatePath(`/admin/${resource.slug}`);
   redirect(`/admin/${resource.slug}/edit?id=${encodeURIComponent(String(duplicatedRecord.id))}`);
@@ -646,114 +622,9 @@ export async function deleteAdminRecord(collection: string, id: string, _formDat
 
   await removeAdminImages(imageUrls);
 
-  await markMenuDirtyForResource(supabase, restaurantId, resource.slug);
   revalidatePath("/admin");
   revalidatePath(`/admin/${resource.slug}`);
   redirect(`/admin/${resource.slug}`);
-}
-
-export async function publishMenuChanges() {
-  const { supabase, restaurantId, userId } = await getAdminClient();
-  const snapshot = await buildMenuPublicationSnapshot(supabase, restaurantId);
-  const { error: insertError } = await supabase.from("menu_publications").insert({
-    published_by: userId,
-    restaurant_id: restaurantId,
-    snapshot,
-  });
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
-
-  const { error: updateError } = await supabase
-    .from("restaurants")
-    .update({ menu_dirty: false, menu_published_at: snapshot.publishedAt })
-    .eq("id", restaurantId);
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
-
-  revalidatePath("/admin", "layout");
-  revalidatePath("/[restaurantSlug]/order", "page");
-  revalidatePath("/staff/order");
-}
-
-export async function discardUnpublishedChanges() {
-  const { supabase, restaurantId } = await getAdminClient();
-
-  const { data: lastPublication } = await supabase
-    .from("menu_publications")
-    .select("snapshot")
-    .eq("restaurant_id", restaurantId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!lastPublication) {
-    throw new Error("No published version to revert to.");
-  }
-
-  const snapshot = lastPublication.snapshot as unknown as MenuPublicationSnapshot;
-  const rawData = snapshot.rawData;
-
-  if (rawData) {
-    const tables = [
-      "menu_item_locations",
-      "menu_item_add_on_options",
-      "menu_item_ingredients",
-      "menu_item_allergens",
-      "category_locations",
-      "menu_items",
-      "subcategories",
-      "categories",
-    ] as const;
-
-    for (const table of tables) {
-      const { error } = await supabase
-        .from(table as never)
-        .delete()
-        .eq("restaurant_id", restaurantId);
-
-      if (error) {
-        throw new Error(error.message);
-      }
-    }
-
-    const insertTables = [
-      ["categories", rawData.categories],
-      ["subcategories", rawData.subcategories],
-      ["menu_items", rawData.menu_items],
-      ["menu_item_locations", rawData.menu_item_locations],
-      ["menu_item_add_on_options", rawData.menu_item_add_on_options],
-      ["menu_item_ingredients", rawData.menu_item_ingredients],
-      ["menu_item_allergens", rawData.menu_item_allergens],
-      ["category_locations", rawData.category_locations],
-    ] as const;
-
-    for (const [table, rows] of insertTables) {
-      if (rows.length === 0) continue;
-
-      const { error } = await supabase.from(table as never).insert(rows);
-
-      if (error) {
-        throw new Error(error.message);
-      }
-    }
-  }
-
-  const { error: updateError } = await supabase
-    .from("restaurants")
-    .update({ menu_dirty: false, menu_published_at: new Date().toISOString() })
-    .eq("id", restaurantId);
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
-
-  revalidatePath("/admin", "layout");
-  revalidatePath("/[restaurantSlug]/order", "page");
-  revalidatePath("/staff/order");
 }
 
 export async function signOut() {
@@ -874,42 +745,4 @@ export async function deleteLocationHoursOverride(formData: FormData) {
 
   revalidatePath(`/admin/locations/edit?id=${encodeURIComponent(locationId)}`);
   return { success: true };
-}
-
-export async function getMenuChanges(): Promise<MenuChange[]> {
-  const { supabase, restaurantId } = await getAdminClient();
-
-  const { data: lastPublication } = await supabase
-    .from("menu_publications")
-    .select("snapshot")
-    .eq("restaurant_id", restaurantId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!lastPublication) {
-    return [];
-  }
-
-  const snapshot = lastPublication.snapshot as unknown as MenuPublicationSnapshot;
-
-  const locales = ["da", "en", "no", "sv"] as const;
-  const currentSnapshot = await buildMenuPublicationSnapshot(supabase, restaurantId);
-  const seen = new Set<string>();
-  const allChanges: MenuChange[] = [];
-
-  for (const locale of locales) {
-    const published = snapshot.categoriesByLocale[locale] ?? [];
-    const current = currentSnapshot.categoriesByLocale[locale] ?? [];
-    const localeChanges = computeMenuDiff(published, current);
-
-    for (const change of localeChanges) {
-      const key = `${change.type}:${change.summary}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      allChanges.push(change);
-    }
-  }
-
-  return allChanges;
 }

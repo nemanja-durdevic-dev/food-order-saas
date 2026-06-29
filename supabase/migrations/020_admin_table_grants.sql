@@ -14,7 +14,6 @@ grant insert, update, delete on public.category_locations to authenticated;
 grant insert, update, delete on public.menu_item_add_on_options to authenticated;
 grant insert, update, delete on public.menu_item_ingredients to authenticated;
 grant insert, update, delete on public.menu_item_allergens to authenticated;
-grant insert, update, delete on public.menu_publications to authenticated;
 grant insert, update, delete on public.add_on_options to authenticated;
 grant insert, update, delete on public.ingredients to authenticated;
 grant insert, update, delete on public.allergens to authenticated;

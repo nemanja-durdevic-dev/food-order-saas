@@ -37,7 +37,7 @@ async function getAdminContext() {
 
   const { data: restaurant } = await supabaseAdmin
     .from("restaurants")
-    .select("name, menu_dirty, menu_published_at")
+    .select("name")
     .eq("id", membership.restaurant_id)
     .maybeSingle();
 
@@ -55,9 +55,10 @@ async function withRelationOptions(fields: AdminField[], restaurantId: string) {
         return { ...field, options: [] };
       }
 
+      const extraColumns = field.relation.table === "subcategories" ? ", category_id" : "";
       let query = supabaseAdmin
         .from(field.relation.table)
-        .select(`id, ${field.relation.labelColumn}`);
+        .select(`id, ${field.relation.labelColumn}${extraColumns}`);
 
       if (field.relation.restaurantScoped !== false) {
         query = query.eq("restaurant_id", restaurantId);
@@ -72,6 +73,7 @@ async function withRelationOptions(fields: AdminField[], restaurantId: string) {
         options: relationRecords.map((record) => ({
           label: String(record[field.relation!.labelColumn] ?? "Untitled"),
           value: String(record.id),
+          ...(extraColumns ? { data: { categoryId: String(record.category_id ?? "") } } : {}),
         })),
       };
     }),
@@ -97,8 +99,6 @@ export default async function AdminCreatePage({ params }: Props) {
           { href: `/admin/${resource.slug}`, label: resource.pluralLabel },
           { label: "Create" },
         ]}
-        menuDirty={Boolean(restaurant?.menu_dirty)}
-        menuPublishedAt={restaurant?.menu_published_at ?? null}
         restaurantName={restaurant?.name}
       >
         <section className="max-w-2xl rounded-lg border border-border bg-card p-6">
@@ -131,8 +131,6 @@ export default async function AdminCreatePage({ params }: Props) {
         { href: `/admin/${resource.slug}`, label: resource.pluralLabel },
         { label: "Create" },
       ]}
-      menuDirty={Boolean(restaurant?.menu_dirty)}
-      menuPublishedAt={restaurant?.menu_published_at ?? null}
       restaurantName={restaurant?.name}
     >
       <AdminRecordForm
