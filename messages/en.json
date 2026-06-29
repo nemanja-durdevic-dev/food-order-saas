@@ -175,8 +175,8 @@
     "completed_note": "This order has been completed. Thank you!",
     "repeat_order": "Repeat order",
     "status": {
-      "pending": "Pending payment",
-      "confirmed": "Paid",
+      "pending": "Pending",
+      "confirmed": "Confirmed",
       "preparing": "Being prepared",
       "ready_for_pickup": "Ready for pickup",
       "picked_up": "Picked up",

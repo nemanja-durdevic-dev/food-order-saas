@@ -175,8 +175,8 @@
     "completed_note": "Denne bestillingen er fullført. Takk!",
     "repeat_order": "Bestill på nytt",
     "status": {
-      "pending": "Venter på betaling",
-      "confirmed": "Betalt",
+      "pending": "Venter",
+      "confirmed": "Bekreftet",
       "preparing": "Blir tilberedt",
       "ready_for_pickup": "Klar for henting",
       "picked_up": "Hentet",

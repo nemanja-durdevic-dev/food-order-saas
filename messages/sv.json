@@ -175,8 +175,8 @@
     "completed_note": "Denna beställning är slutförd. Tack!",
     "repeat_order": "Beställ igen",
     "status": {
-      "pending": "Väntar på betalning",
-      "confirmed": "Betald",
+      "pending": "Väntar",
+      "confirmed": "Bekräftad",
       "preparing": "Tillagas",
       "ready_for_pickup": "Redo för upphämtning",
       "picked_up": "Upphämtad",
