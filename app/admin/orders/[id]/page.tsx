@@ -350,20 +350,6 @@ export default async function OrderDetailPage({ params }: Props) {
                     {order.payment_status.replace(/_/g, " ")}
                   </dd>
                 </div>
-                {order.stripe_session_id && (
-                  <div className="rounded-lg border border-border bg-muted/30 p-3">
-                    <dt className="text-xs text-muted-foreground">Stripe session</dt>
-                    <dd className="mt-1 font-mono text-xs break-all">{order.stripe_session_id}</dd>
-                  </div>
-                )}
-                {order.vipps_payment_reference && (
-                  <div className="rounded-lg border border-border bg-muted/30 p-3">
-                    <dt className="text-xs text-muted-foreground">Vipps reference</dt>
-                    <dd className="mt-1 font-mono text-xs break-all">
-                      {order.vipps_payment_reference}
-                    </dd>
-                  </div>
-                )}
               </dl>
             </div>
           </div>

@@ -633,28 +633,6 @@ export async function signOut() {
   redirect("/admin");
 }
 
-export async function updateStripeSettings(formData: FormData) {
-  const { supabase, restaurantId } = await getAdminClient();
-
-  const stripeAccountId = String(formData.get("stripeAccountId") ?? "").trim() || null;
-  const paymentsEnabled = formData.get("paymentsEnabled") === "true";
-
-  const { error } = await supabase
-    .from("restaurants")
-    .update({
-      payments_enabled: paymentsEnabled,
-      stripe_account_id: stripeAccountId,
-    })
-    .eq("id", restaurantId);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  revalidatePath("/admin");
-  redirect("/admin?updated=1");
-}
-
 export async function toggleLocationStatus(formData: FormData) {
   const { supabase, restaurantId } = await getAdminClient();
   const locationId = String(formData.get("locationId") ?? "");

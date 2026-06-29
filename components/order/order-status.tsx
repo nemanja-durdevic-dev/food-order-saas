@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -8,7 +8,6 @@ import {
   Clock,
   CookingPot,
   Download,
-  LoaderCircle,
   Package,
   XCircle,
 } from "lucide-react";
@@ -18,8 +17,6 @@ import { supabase } from "@/lib/supabase";
 import { BRAND_NAME } from "@/lib/brand";
 import { TranslationProvider, useTranslations } from "@/components/order-menu/locale-context";
 import type { Messages } from "@/lib/dictionaries";
-
-const UNPAID_TIMEOUT_MS = 30_000;
 
 export type OrderData = {
   id: string;
@@ -75,26 +72,7 @@ function OrderStatusInner({
 }) {
   const t = useTranslations();
   const [order, setOrder] = useState<OrderData>(initialOrder);
-  const [paymentTimedOut, setPaymentTimedOut] = useState(false);
   const hasClearedCart = useRef(false);
-  const unpaidTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isMounted = useRef(true);
-  const clearUnpaidTimer = useCallback(() => {
-    if (unpaidTimer.current) {
-      clearTimeout(unpaidTimer.current);
-      unpaidTimer.current = null;
-    }
-  }, []);
-
-  const verifyPayment = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/orders/${orderId}/verify-payment`);
-      const data = await res.json();
-      return data as { paid: boolean };
-    } catch {
-      return { paid: false };
-    }
-  }, [orderId]);
 
   useEffect(() => {
     if (
@@ -106,35 +84,7 @@ function OrderStatusInner({
       writeStoredCart([]);
       hasClearedCart.current = true;
     }
-
-    if (initialOrder.payment_status === "unpaid") {
-      unpaidTimer.current = setTimeout(async () => {
-        if (!isMounted.current) return;
-
-        const { paid } = await verifyPayment();
-
-        if (!isMounted.current) return;
-
-        if (paid) {
-          clearUnpaidTimer();
-          setOrder((prev) => ({
-            ...prev,
-            payment_status: "paid",
-            status: "confirmed",
-          }));
-          writeStoredCart([]);
-          hasClearedCart.current = true;
-        } else {
-          setPaymentTimedOut(true);
-        }
-      }, UNPAID_TIMEOUT_MS);
-    }
-
-    return () => {
-      isMounted.current = false;
-      clearUnpaidTimer();
-    };
-  }, [initialOrder.status, initialOrder.payment_status, verifyPayment, clearUnpaidTimer]);
+  }, [initialOrder.status]);
 
   useEffect(() => {
     const channel = supabase
@@ -150,10 +100,6 @@ function OrderStatusInner({
         (payload) => {
           const updated = payload.new as OrderData;
           setOrder((prev) => ({ ...prev, ...updated }));
-
-          if (updated.payment_status !== "unpaid") {
-            clearUnpaidTimer();
-          }
 
           if (
             !hasClearedCart.current &&
@@ -171,9 +117,8 @@ function OrderStatusInner({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [orderId, clearUnpaidTimer]);
+  }, [orderId]);
 
-  const isUnpaidPaying = order.payment_status === "unpaid" && !paymentTimedOut;
   const currentStepIndex = statusSteps.indexOf(order.status as (typeof statusSteps)[number]);
   const isCancelled = order.status === "cancelled";
   const isCompleted = order.status === "completed";
@@ -305,169 +250,133 @@ function OrderStatusInner({
         </Link>
         <h1 className="pt-4 text-xl font-black tracking-tight">{t("order.title")}</h1>
 
-        {paymentTimedOut ? (
-          <div className="flex flex-col items-center gap-3 pt-8 text-center">
-            <XCircle className="size-10 text-destructive" aria-hidden="true" />
+        <>
+          <div className="flex items-center gap-3 pt-6">
+            <StatusIcon
+              className={`size-8 ${
+                isCancelled ? "text-destructive" : isCompleted ? "text-green-600" : "text-primary"
+              }`}
+              aria-hidden="true"
+            />
             <div>
-              <p className="text-lg font-bold">{t("order.payment_failed")}</p>
-              <p className="pt-1 text-sm text-muted-foreground">{t("order.payment_failed_note")}</p>
+              <p className="text-lg font-bold">{t(`order.status.${order.status}`)}</p>
+              <p className="text-sm text-muted-foreground">
+                {(Array.isArray(order.locations) ? order.locations[0] : order.locations)?.name ??
+                  t("order.unknown_location")}
+              </p>
+              <p className="text-xs font-bold text-muted-foreground/60">#{order.order_code}</p>
             </div>
-            <Link
-              className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-md bg-primary px-6 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              href="/order"
-            >
-              {t("order.back_to_menu")}
-            </Link>
           </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-3 pt-6">
-              {isUnpaidPaying ? (
-                <LoaderCircle className="size-8 animate-spin text-primary" aria-hidden="true" />
-              ) : (
-                <StatusIcon
-                  className={`size-8 ${
-                    isCancelled
-                      ? "text-destructive"
-                      : isCompleted
-                        ? "text-green-600"
-                        : "text-primary"
-                  }`}
-                  aria-hidden="true"
-                />
-              )}
-              <div>
-                <p className="text-lg font-bold">
-                  {isUnpaidPaying ? t("order.payment_pending") : t(`order.status.${order.status}`)}
-                </p>
-                {!isUnpaidPaying ? (
-                  <>
-                    <p className="text-sm text-muted-foreground">
-                      {(Array.isArray(order.locations) ? order.locations[0] : order.locations)
-                        ?.name ?? t("order.unknown_location")}
-                    </p>
-                    <p className="text-xs font-bold text-muted-foreground/60">
-                      #{order.order_code}
-                    </p>
-                  </>
-                ) : null}
-              </div>
-            </div>
 
-            {isUnpaidPaying ? null : !isCancelled && !isCompleted ? (
-              <div className="pt-4">
-                {statusSteps.map((step, index) => {
-                  const isActive = index <= currentStepIndex;
-                  const isCurrent = index === currentStepIndex;
-                  const StepIcon = statusIcons[step];
+          {!isCancelled && !isCompleted ? (
+            <div className="pt-4">
+              {statusSteps.map((step, index) => {
+                const isActive = index <= currentStepIndex;
+                const isCurrent = index === currentStepIndex;
+                const StepIcon = statusIcons[step];
 
-                  return (
-                    <div className="flex gap-3" key={step}>
-                      <div className="flex flex-col items-center">
+                return (
+                  <div className="flex gap-3" key={step}>
+                    <div className="flex flex-col items-center">
+                      <div
+                        className={`flex size-8 items-center justify-center rounded-full ${
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        } ${isCurrent && step !== "picked_up" ? "animate-pulse ring-2 ring-primary ring-offset-2" : ""}`}
+                      >
+                        <StepIcon className="size-4" aria-hidden="true" />
+                      </div>
+                      {index < statusSteps.length - 1 ? (
                         <div
-                          className={`flex size-8 items-center justify-center rounded-full ${
-                            isActive
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground"
-                          } ${isCurrent && step !== "picked_up" ? "animate-pulse ring-2 ring-primary ring-offset-2" : ""}`}
-                        >
-                          <StepIcon className="size-4" aria-hidden="true" />
-                        </div>
-                        {index < statusSteps.length - 1 ? (
-                          <div
-                            className={`mt-0.5 h-8 w-0.5 ${
-                              isActive && index < currentStepIndex ? "bg-primary" : "bg-muted"
-                            }`}
-                          />
-                        ) : null}
-                      </div>
-                      <div className="self-start">
-                        <p
-                          className={`py-1.5 text-sm font-semibold ${
-                            isActive ? "text-foreground" : "text-muted-foreground"
+                          className={`mt-0.5 h-8 w-0.5 ${
+                            isActive && index < currentStepIndex ? "bg-primary" : "bg-muted"
                           }`}
-                        >
-                          {t(`order.status.${step}`)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
-
-            {isCancelled ? (
-              <p className="pt-4 text-sm text-muted-foreground">{t("order.cancelled_note")}</p>
-            ) : null}
-
-            {isCompleted ? (
-              <p className="pt-4 text-sm text-muted-foreground">{t("order.completed_note")}</p>
-            ) : null}
-
-            {!paymentTimedOut && initialItems.length > 0 ? (
-              <div className="border-t border-border mt-6 pt-4">
-                <h2 className="mb-4 text-sm font-bold tracking-tight">{t("order.items")}</h2>
-                <div className="space-y-3">
-                  {initialItems.map((item) => (
-                    <div className="text-sm" key={item.id}>
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="min-w-0 truncate font-medium">
-                          <span className="text-muted-foreground">{item.quantity}x</span>{" "}
-                          {item.item_name}
-                        </span>
-                        <span className="shrink-0 font-semibold">{item.total} kr</span>
-                      </div>
-                      {item.customizations?.selectedOptions?.length ? (
-                        <div className="ml-5 mt-0.5 space-y-0.5 text-xs text-muted-foreground">
-                          {item.customizations.selectedOptions.map((opt) => (
-                            <p key={opt.choiceId}>
-                              {opt.priceModifierType === "increase" ? "+ " : ""}
-                              {opt.choiceName}
-                            </p>
-                          ))}
-                        </div>
+                        />
                       ) : null}
                     </div>
-                  ))}
-                </div>
-                <div className="mt-4 flex items-center justify-between gap-4 border-t border-border pt-4 text-sm font-bold">
-                  <span>{t("common.total")}</span>
-                  <span>{order.subtotal} kr</span>
-                </div>
-              </div>
-            ) : null}
+                    <div className="self-start">
+                      <p
+                        className={`py-1.5 text-sm font-semibold ${
+                          isActive ? "text-foreground" : "text-muted-foreground"
+                        }`}
+                      >
+                        {t(`order.status.${step}`)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
 
-            {!paymentTimedOut ? (
-              <div className="flex flex-col items-center gap-4 pb-8 pt-6">
-                {isCompleted ? (
-                  <button
-                    className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-border bg-white text-sm font-bold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    onClick={handleRepeatOrder}
-                    type="button"
-                  >
-                    {t("order.repeat_order")}
-                  </button>
-                ) : null}
-                {!isUnpaidPaying ? (
-                  <button
-                    className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-border bg-white text-sm font-bold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    onClick={downloadReceipt}
-                    type="button"
-                  >
-                    <Download className="size-4" aria-hidden="true" />
-                    {t("order.download_receipt")}
-                  </button>
-                ) : null}
-                <Link
-                  className="text-sm font-medium text-primary underline underline-offset-4"
-                  href="/order"
-                >
-                  {t("order.place_another")}
-                </Link>
+          {isCancelled ? (
+            <p className="pt-4 text-sm text-muted-foreground">{t("order.cancelled_note")}</p>
+          ) : null}
+
+          {isCompleted ? (
+            <p className="pt-4 text-sm text-muted-foreground">{t("order.completed_note")}</p>
+          ) : null}
+
+          {initialItems.length > 0 ? (
+            <div className="border-t border-border mt-6 pt-4">
+              <h2 className="mb-4 text-sm font-bold tracking-tight">{t("order.items")}</h2>
+              <div className="space-y-3">
+                {initialItems.map((item) => (
+                  <div className="text-sm" key={item.id}>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="min-w-0 truncate font-medium">
+                        <span className="text-muted-foreground">{item.quantity}x</span>{" "}
+                        {item.item_name}
+                      </span>
+                      <span className="shrink-0 font-semibold">{item.total} kr</span>
+                    </div>
+                    {item.customizations?.selectedOptions?.length ? (
+                      <div className="ml-5 mt-0.5 space-y-0.5 text-xs text-muted-foreground">
+                        {item.customizations.selectedOptions.map((opt) => (
+                          <p key={opt.choiceId}>
+                            {opt.priceModifierType === "increase" ? "+ " : ""}
+                            {opt.choiceName}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
               </div>
+              <div className="mt-4 flex items-center justify-between gap-4 border-t border-border pt-4 text-sm font-bold">
+                <span>{t("common.total")}</span>
+                <span>{order.subtotal} kr</span>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="flex flex-col items-center gap-4 pb-8 pt-6">
+            {isCompleted ? (
+              <button
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-border bg-white text-sm font-bold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                onClick={handleRepeatOrder}
+                type="button"
+              >
+                {t("order.repeat_order")}
+              </button>
             ) : null}
-          </>
-        )}
+            <button
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-border bg-white text-sm font-bold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={downloadReceipt}
+              type="button"
+            >
+              <Download className="size-4" aria-hidden="true" />
+              {t("order.download_receipt")}
+            </button>
+            <Link
+              className="text-sm font-medium text-primary underline underline-offset-4"
+              href="/order"
+            >
+              {t("order.place_another")}
+            </Link>
+          </div>
+        </>
       </div>
     </div>
   );

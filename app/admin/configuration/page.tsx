@@ -83,7 +83,7 @@ export default async function AdminConfigurationPage() {
       supabaseAdmin
         .from("restaurants")
         .select(
-          "id, name, slug, description, logo_url, cover_image_url, brand_color, stripe_account_id, payments_enabled, status, contact_email, instagram_url, facebook_url, tiktok_url",
+          "id, name, slug, description, logo_url, cover_image_url, brand_color, status, contact_email, instagram_url, facebook_url, tiktok_url",
         )
         .eq("id", membership.restaurant_id)
         .maybeSingle(),
@@ -164,15 +164,6 @@ export default async function AdminConfigurationPage() {
     hasValue(restaurant.instagram_url) ||
     hasValue(restaurant.facebook_url) ||
     hasValue(restaurant.tiktok_url);
-  const stripeConfigured = restaurant.payments_enabled && hasValue(restaurant.stripe_account_id);
-  const vippsConfigured = Boolean(
-    process.env.VIPPS_CLIENT_ID &&
-    process.env.VIPPS_CLIENT_SECRET &&
-    process.env.VIPPS_SUBSCRIPTION_KEY &&
-    process.env.VIPPS_MERCHANT_SERIAL,
-  );
-  const netsConfigured = Boolean(process.env.NETS_SECRET_KEY);
-  const paymentProviderConfigured = stripeConfigured || vippsConfigured || netsConfigured;
   const assignedStaff = staff ?? [];
 
   const sections: ConfigurationSection[] = [
@@ -273,31 +264,6 @@ export default async function AdminConfigurationPage() {
           "All menu items have images",
           "Images improve conversion but are not required.",
           allItemsHaveImages,
-        ),
-      ],
-    },
-    {
-      title: "Payments",
-      checks: [
-        requiredCheck(
-          "At least one payment provider is configured",
-          "Online checkout needs Stripe, Vipps, or Nets configured.",
-          paymentProviderConfigured,
-        ),
-        recommendedCheck(
-          "Stripe Connect is ready",
-          "Stripe requires payments to be enabled and an account ID.",
-          stripeConfigured,
-        ),
-        recommendedCheck(
-          "Vipps environment is ready",
-          "Vipps requires all server-side Vipps credentials.",
-          vippsConfigured,
-        ),
-        recommendedCheck(
-          "Nets environment is ready",
-          "Nets requires NETS_SECRET_KEY.",
-          netsConfigured,
         ),
       ],
     },
