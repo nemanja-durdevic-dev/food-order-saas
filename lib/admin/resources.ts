@@ -116,6 +116,7 @@ const subcategoryRelationField: AdminField = {
 };
 
 const menuItemFields: AdminField[] = [
+  { key: "is_available", label: "Available", type: "boolean" },
   { key: "name", label: "Name", type: "text", required: true },
   { key: "name_no", label: "Norwegian name", type: "text" },
   { key: "name_sv", label: "Swedish name", type: "text" },
