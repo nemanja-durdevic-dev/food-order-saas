@@ -179,7 +179,7 @@ export function CartPanel({
           console.error("Checkout error:", data.error);
           return;
         }
-        window.location.href = `/order/${data.order_id}/status`;
+        window.location.href = `/order/${data.order_id}`;
       })
       .catch((err) => {
         console.error("Checkout error:", err);
